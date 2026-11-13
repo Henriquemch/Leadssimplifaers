@@ -27,7 +27,8 @@ async function adminCookie() {
   assert.equal(response.status, 200);
   return response.headers.get("set-cookie").split(";")[0];
 }
-\n
+
+
 test("login rejects an invalid origin and invalid password", async () => {
   const badOrigin = await app.fetch(new Request("https://leadpilot.test/auth/login", {
     method: "POST", headers: { origin: "https://evil.test", "content-type": "application/json" },
@@ -56,7 +57,8 @@ test("mutating API rejects requests without the configured origin", async () => 
   }), envWithCompany({ id: "c1", qualification_status: "pending" }));
   assert.equal(response.status, 403);
 });
-\ntest("health is public and reports D1 binding", async () => {
+
+test("health is public and reports D1 binding", async () => {
   const response = await app.fetch(new Request("https://leadpilot.test/health"), env);
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { ok: true, service: "leadpilot-api", database_configured: true });
@@ -129,7 +131,7 @@ function envWithCompany(company) {
 test("commercial check is blocked before qualification approval", async () => {
   const response = await app.fetch(new Request("https://leadpilot.test/api/companies/c1/commercial-check", {
     method: "PATCH",
-    headers: { authorization: "Bearer admin-test-secret", "content-type": "application/json" },
+    headers: { cookie: await adminCookie(), origin: env.APP_ORIGIN, "content-type": "application/json" },
     body: JSON.stringify({ customer_status: "no", contacted_status: "no", active_process_status: "no", commercial_status: "eligible" })
   }), envWithCompany({ id: "c1", qualification_status: "pending" }));
   assert.equal(response.status, 409);
@@ -138,7 +140,7 @@ test("commercial check is blocked before qualification approval", async () => {
 test("eligible status is blocked for current customers", async () => {
   const response = await app.fetch(new Request("https://leadpilot.test/api/companies/c1/commercial-check", {
     method: "PATCH",
-    headers: { authorization: "Bearer admin-test-secret", "content-type": "application/json" },
+    headers: { cookie: await adminCookie(), origin: env.APP_ORIGIN, "content-type": "application/json" },
     body: JSON.stringify({ customer_status: "yes", contacted_status: "no", active_process_status: "no", commercial_status: "eligible" })
   }), envWithCompany({ id: "c1", qualification_status: "approved" }));
   assert.equal(response.status, 409);
@@ -147,7 +149,7 @@ test("eligible status is blocked for current customers", async () => {
 test("decision-maker research is blocked unless company is eligible", async () => {
   const response = await app.fetch(new Request("https://leadpilot.test/api/decision-makers", {
     method: "POST",
-    headers: { authorization: "Bearer admin-test-secret", "content-type": "application/json" },
+    headers: { cookie: await adminCookie(), origin: env.APP_ORIGIN, "content-type": "application/json" },
     body: JSON.stringify({ company_id: "c1", full_name: "Pessoa Teste" })
   }), envWithCompany({ id: "c1", qualification_status: "approved", commercial_status: "pending_review", customer_status: "no", active_process_status: "no" }));
   assert.equal(response.status, 409);
@@ -156,7 +158,7 @@ test("decision-maker research is blocked unless company is eligible", async () =
 test("decision-maker research allowed only for explicitly eligible company", async () => {
   const response = await app.fetch(new Request("https://leadpilot.test/api/decision-makers", {
     method: "POST",
-    headers: { authorization: "Bearer admin-test-secret", "content-type": "application/json" },
+    headers: { cookie: await adminCookie(), origin: env.APP_ORIGIN, "content-type": "application/json" },
     body: JSON.stringify({ company_id: "c1", full_name: "Pessoa Teste", job_title: "Diretor" })
   }), envWithCompany({ id: "c1", qualification_status: "approved", commercial_status: "eligible", customer_status: "no", active_process_status: "no" }));
   assert.equal(response.status, 201);
@@ -164,7 +166,7 @@ test("decision-maker research allowed only for explicitly eligible company", asy
 
 test("company search accepts bounded filters", async () => {
   const response = await app.fetch(new Request("https://leadpilot.test/api/companies?q=construcao&qualification_status=approved&commercial_status=eligible", {
-    headers: { authorization: "Bearer admin-test-secret" }
+    headers: { cookie: await adminCookie() }
   }), env);
   assert.equal(response.status, 200);
   assert.deepEqual((await response.json()).companies, []);
@@ -172,7 +174,7 @@ test("company search accepts bounded filters", async () => {
 
 test("company search rejects invalid workflow filters", async () => {
   const response = await app.fetch(new Request("https://leadpilot.test/api/companies?commercial_status=send_to_crm", {
-    headers: { authorization: "Bearer admin-test-secret" }
+    headers: { cookie: await adminCookie() }
   }), env);
   assert.equal(response.status, 400);
 });
