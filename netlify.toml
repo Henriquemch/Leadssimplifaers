@@ -2,6 +2,11 @@
   directory = "netlify/functions"
 
 [[redirects]]
+  from = "/api/sources"
+  to = "/.netlify/functions/sources"
+  status = 200
+
+[[redirects]]
   from = "/api/leadpilot"
   to = "/.netlify/functions/leadpilot"
   status = 200
