@@ -1,10 +1,5 @@
 name: Import official BASE contracts into LeadPilot
 on:
-  push:
-    branches:
-      - migration/cloudflare-d1-foundation
-    paths:
-      - .github/workflows/base-profile-dry-run.trigger
   workflow_dispatch:
     inputs:
       dry_run:
@@ -34,7 +29,7 @@ jobs:
         run: python -m py_compile scripts/import-base-contracts.py scripts/profile-contract-data.py
       - name: Parse and import rolling five-year records
         env:
-          LEADPILOT_DRY_RUN: ${{ github.event_name == 'push' && 'true' || inputs.dry_run }}
+          LEADPILOT_DRY_RUN: ${{ inputs.dry_run }}
           LEADPILOT_WORKER_URL: ${{ secrets.LEADPILOT_WORKER_URL }}
           INGEST_SECRET: ${{ secrets.INGEST_SECRET }}
         run: python scripts/import-base-contracts.py
