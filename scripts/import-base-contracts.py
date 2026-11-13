@@ -299,6 +299,9 @@ def main():
     totals["companies"] = len(profiles)
     batch_size = 50
     ready = [finalize_profile(profile) for profile in profiles.values()]
+    totals["profile_payload_bytes"] = sum(len(json.dumps(item, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) for item in ready)
+    totals["average_profile_bytes"] = round(totals["profile_payload_bytes"] / len(ready)) if ready else 0
+    totals["estimated_batch_count"] = (len(ready) + batch_size - 1) // batch_size
     for start in range(0, len(ready), batch_size):
         batch = ready[start:start + batch_size]
         if not dry_run:
