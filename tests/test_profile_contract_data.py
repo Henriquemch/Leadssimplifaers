@@ -1,5 +1,9 @@
-import io, json, unittest, zipfile
-from scripts.profile_contract_data import rows_from_bytes, flatten
+import io, json, unittest, zipfile, importlib.util
+from pathlib import Path
+spec=importlib.util.spec_from_file_location("profile_contract_data", Path(__file__).parents[1] / "scripts" / "profile-contract-data.py")
+module=importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+rows_from_bytes, flatten = module.rows_from_bytes, module.flatten
 
 class ParserTests(unittest.TestCase):
     def test_json_array(self):
