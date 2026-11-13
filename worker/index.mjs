@@ -147,7 +147,13 @@ export default {
       const rows = await env.DB.prepare(
         "SELECT source_id, participant_role, procedure_type, cpv, description, contracting_authority, contract_value, publication_date, procedure_url FROM procurements WHERE company_id = ? ORDER BY publication_date DESC LIMIT ?"
       ).bind(companyId, limit).all();
-      return json({ ok: true, summary: summary.results?.[0] || { total_contracts: 0, total_value: 0, latest_date: null }, procurements: rows.results || [] });
+      const cpvGroups = await env.DB.prepare(
+        "SELECT cpv, COUNT(*) AS contracts, COALESCE(SUM(contract_value), 0) AS total_value FROM procurements WHERE company_id = ? AND cpv IS NOT NULL AND cpv != '' GROUP BY cpv ORDER BY contracts DESC, total_value DESC LIMIT 5"
+      ).bind(companyId).all();
+      const authorityGroups = await env.DB.prepare(
+        "SELECT contracting_authority, COUNT(*) AS contracts, COALESCE(SUM(contract_value), 0) AS total_value FROM procurements WHERE company_id = ? AND contracting_authority IS NOT NULL AND contracting_authority != '' GROUP BY contracting_authority ORDER BY contracts DESC, total_value DESC LIMIT 5"
+      ).bind(companyId).all();
+      return json({ ok: true, summary: summary.results?.[0] || { total_contracts: 0, total_value: 0, latest_date: null }, procurements: rows.results || [], top_cpv: cpvGroups.results || [], top_authorities: authorityGroups.results || [] });
     }
 
     const qualificationMatch = url.pathname.match(/^\/api\/companies\/([^/]+)\/qualification$/);
