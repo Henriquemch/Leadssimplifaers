@@ -7,6 +7,59 @@ function authorized(request, secret) {
   return Boolean(secret) && request.headers.get("authorization") === `Bearer ${secret}`;
 }
 const id = () => crypto.randomUUID();
+const SESSION_COOKIE = "__Host-leadpilot_session";
+const SESSION_TTL = 60 * 60 * 12;
+
+function base64url(bytes) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/=/g, "").replace(/\\+/g, "-").replace(/\\//g, "_");
+}
+function fromBase64url(value) {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const binary = atob(normalized + "=".repeat((4 - normalized.length % 4) % 4));
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+}
+async function hmac(value, secret) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(value)));
+}
+async function safeEqual(a, b) {
+  const [left, right] = await Promise.all([
+    crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(a))),
+    crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(b)))
+  ]);
+  const x = new Uint8Array(left), y = new Uint8Array(right);
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
+  return diff === 0;
+}
+function cookieValue(request, name) {
+  const entry = (request.headers.get("cookie") || "").split(";").map(v => v.trim()).find(v => v.startsWith(name + "="));
+  return entry ? entry.slice(name.length + 1) : "";
+}
+function originAllowed(request, env) {
+  return Boolean(env.APP_ORIGIN) && request.headers.get("origin") === env.APP_ORIGIN;
+}
+async function createSession(secret) {
+  const payload = base64url(new TextEncoder().encode(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + SESSION_TTL })));
+  return payload + "." + base64url(await hmac(payload, secret));
+}
+async function validSession(request, secret) {
+  if (!secret) return false;
+  const token = cookieValue(request, SESSION_COOKIE);
+  const [payload, signature, extra] = token.split(".");
+  if (!payload || !signature || extra) return false;
+  try {
+    const expected = await hmac(payload, secret);
+    if (!(await safeEqual(base64url(expected), signature))) return false;
+    const data = JSON.parse(new TextDecoder().decode(fromBase64url(payload)));
+    return Number.isInteger(data.exp) && data.exp > Math.floor(Date.now() / 1000);
+  } catch {
+    return false;
+  }
+}
+const sessionCookie = (value, maxAge = SESSION_TTL) => `${SESSION_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
 const validChoice = (value) => ["yes", "no", "unknown"].includes(value);
 
 async function companyById(DB, companyId) {
@@ -20,11 +73,40 @@ export default {
     if (request.method === "GET" && url.pathname === "/health") {
       return json({ ok: true, service: "leadpilot-api", database_configured: Boolean(env.DB) });
     }
-    if (!env.DB) return json({ ok: false, error: "D1 binding DB is not configured." }, 503);
-
-    if (url.pathname.startsWith("/api/") && !authorized(request, env.ADMIN_TOKEN)) {
-      return json({ ok: false, error: "Unauthorized" }, 401);
+    if (request.method === "POST" && url.pathname === "/auth/login") {
+      if (!originAllowed(request, env)) return json({ ok: false, error: "Invalid origin." }, 403);
+      if (!env.ADMIN_PASSWORD || !env.SESSION_SECRET || env.SESSION_SECRET.length < 32) {
+        return json({ ok: false, error: "Authentication is not configured securely." }, 503);
+      }
+      const body = await request.json().catch(() => null);
+      if (!body || typeof body.password !== "string" || !(await safeEqual(body.password, env.ADMIN_PASSWORD))) {
+        return json({ ok: false, error: "Invalid credentials." }, 401);
+      }
+      const token = await createSession(env.SESSION_SECRET);
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "set-cookie": sessionCookie(token) }
+      });
     }
+    if (request.method === "GET" && url.pathname === "/auth/session") {
+      const authenticated = await validSession(request, env.SESSION_SECRET);
+      return json({ ok: true, authenticated });
+    }
+    if (request.method === "POST" && url.pathname === "/auth/logout") {
+      if (!originAllowed(request, env)) return json({ ok: false, error: "Invalid origin." }, 403);
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "set-cookie": sessionCookie("", 0) }
+      });
+    }
+
+    if (url.pathname.startsWith("/api/")) {
+      if (!(await validSession(request, env.SESSION_SECRET))) return json({ ok: false, error: "Unauthorized" }, 401);
+      if (!["GET", "HEAD", "OPTIONS"].includes(request.method) && !originAllowed(request, env)) {
+        return json({ ok: false, error: "Invalid origin." }, 403);
+      }
+    }
+    if (!env.DB) return json({ ok: false, error: "D1 binding DB is not configured." }, 503);
 
     if (request.method === "GET" && url.pathname === "/api/companies") {
       const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 50), 1), 100);
@@ -88,13 +170,16 @@ export default {
         return json({ ok: false, error: "Eligibility requires customer=no and active_process=no." }, 409);
       }
       const notes = typeof body.notes === "string" ? body.notes.trim().slice(0, 1500) : null;
+      const nextCommercialStatus = body.customer_status === "yes"
+        ? "not_contact"
+        : (body.active_process_status !== "no" && body.commercial_status === "eligible" ? "pending_review" : body.commercial_status);
       await env.DB.batch([
         env.DB.prepare("UPDATE companies SET customer_status = ?, contacted_status = ?, active_process_status = ?, commercial_notes = ?, commercial_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
-          .bind(body.customer_status, body.contacted_status, body.active_process_status, notes, body.commercial_status, companyId),
+          .bind(body.customer_status, body.contacted_status, body.active_process_status, notes, nextCommercialStatus, companyId),
         env.DB.prepare("INSERT INTO company_events (id, company_id, event_type, summary) VALUES (?, ?, 'commercial_check_changed', ?)")
-          .bind(id(), companyId, `Cliente=${body.customer_status}; contactada=${body.contacted_status}; processo=${body.active_process_status}; estado=${body.commercial_status}`)
+          .bind(id(), companyId, `Cliente=${body.customer_status}; contactada=${body.contacted_status}; processo=${body.active_process_status}; estado=${nextCommercialStatus}`)
       ]);
-      return json({ ok: true, company_id: companyId, commercial_status: body.commercial_status });
+      return json({ ok: true, company_id: companyId, commercial_status: nextCommercialStatus });
     }
 
     if (request.method === "GET" && url.pathname === "/api/companies/events") {
