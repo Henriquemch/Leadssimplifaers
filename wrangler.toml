@@ -1,12 +1,12 @@
-name = "leadpilot-api"
+name = "leadpilot-api-dev"
 main = "worker/index.mjs"
 compatibility_date = "2026-11-13"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "leadpilot"
-database_id = "REPLACE_AFTER_CREATING_D1"
+database_id = "fcea37de-694c-4bc2-ad72-4b70c8e21740"
 migrations_dir = "migrations"
 
 [vars]
-APP_ENV = "production"
+APP_ENV = "staging"
