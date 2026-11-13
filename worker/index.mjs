@@ -165,10 +165,6 @@ export default {
       const company = await companyById(env.DB, companyId);
       if (!company) return json({ ok: false, error: "Company not found." }, 404);
       if (company.qualification_status !== "approved") return json({ ok: false, error: "Only qualified companies can receive a commercial check." }, 409);
-      if (body.commercial_status === "eligible" &&
-          (body.customer_status !== "no" || body.active_process_status !== "no")) {
-        return json({ ok: false, error: "Eligibility requires customer=no and active_process=no." }, 409);
-      }
       const notes = typeof body.notes === "string" ? body.notes.trim().slice(0, 1500) : null;
       const nextCommercialStatus = body.customer_status === "yes"
         ? "not_contact"
