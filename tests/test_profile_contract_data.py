@@ -59,5 +59,44 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(fields["adjudicatario.nif"], "501000000")
 
 
+IMPORT_SCRIPT = Path(__file__).parents[1] / "scripts" / "import-base-contracts.py"
+import_spec = importlib.util.spec_from_file_location("import_base_contracts", IMPORT_SCRIPT)
+import_module = importlib.util.module_from_spec(import_spec)
+import_spec.loader.exec_module(import_module)
+
+
+class ImportMappingTests(unittest.TestCase):
+    def test_awardee_and_explicit_competitor_are_separated(self):
+        row = {
+            "idcontrato": "12345",
+            "dataCelebracaoContrato": "2025-01-10",
+            "adjudicatarios": "[{'nifEntContrato': '501000000', 'descEntContrato': 'Adjudicatária Lda'}]",
+            "concorrentes": "['502000000-Concorrente SA']",
+            "CPV": "[{'cpvID': '45000000-7'}]",
+            "precoContratual": 2500,
+        }
+        records = import_module.normalized_records(row, import_module.date(2024, 1, 1))
+        self.assertEqual([x["procurement"]["participant_role"] for x in records], ["awardee", "competitor_confirmed"])
+        self.assertEqual(records[0]["procurement"]["cpv"], "45000000-7")
+        self.assertEqual(records[1]["company"]["id"], "nif:502000000")
+
+    def test_excludes_contracts_outside_rolling_window(self):
+        row = {
+            "idcontrato": "old",
+            "dataCelebracaoContrato": "2020-12-31",
+            "adjudicatarios": [{"nifEntContrato": "501000000", "descEntContrato": "Empresa"}],
+        }
+        self.assertEqual(import_module.normalized_records(row, import_module.date(2021, 1, 1)), [])
+
+    def test_requires_valid_nif_shape_and_named_entity(self):
+        row = {
+            "idcontrato": "123",
+            "dataCelebracaoContrato": "2025-01-10",
+            "adjudicatarios": [{"nifEntContrato": "12", "descEntContrato": "Sem NIF válido"}],
+        }
+        self.assertEqual(import_module.normalized_records(row, import_module.date(2024, 1, 1)), [])
+
+
+
 if __name__ == "__main__":
     unittest.main()
