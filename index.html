@@ -52,6 +52,26 @@ async function searchDiscovery(){
  root.querySelectorAll("[data-add-lead]").forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api("/api/leads",{method:"POST",body:JSON.stringify({nif:b.dataset.addLead})});b.textContent="Adicionado";showStatus("Empresa adicionada ao pipeline de leads.","status success");await searchDiscovery();}catch(e){b.disabled=false;showStatus(e.message,"status error")}});
  }catch(e){root.innerHTML='<p class="muted">Pesquisa indisponível: '+esc(e.message)+'</p>'}
 }
+
+async function loadExclusions(){
+ const root=$("exclusionList");root.textContent="A carregar…";
+ try{
+  const d=await api("/api/admin/exclusions");const rows=d.exclusions||[];
+  root.innerHTML=rows.length?rows.map(x=>'<div class="company"><div><b>'+esc(x.company_name||"Empresa sem nome")+'</b><div class="muted small">NIF '+esc(x.nif)+' · '+esc(x.reason)+' · '+(x.active?"Ativa":"Inativa")+'</div><div class="muted small">'+esc(x.notes||"Sem notas")+'</div></div><div><button class="secondary" data-exclusion="'+esc(x.nif)+'" data-active="'+(x.active?"1":"0")+'">'+(x.active?"Desativar":"Reativar")+'</button></div></div>').join(""):'<p class="muted">Ainda não existem exclusões.</p>';
+  root.querySelectorAll("[data-exclusion]").forEach(b=>b.onclick=async()=>{try{await api("/api/admin/exclusions/"+encodeURIComponent(b.dataset.exclusion),{method:"PATCH",body:JSON.stringify({active:b.dataset.active!=="1"})});await loadExclusions()}catch(e){$("exclusionStatus").textContent=e.message}});
+ }catch(e){root.textContent="Erro: "+e.message}
+}
+$("addExclusion").onclick=async()=>{
+ const status=$("exclusionStatus");status.textContent="A guardar…";
+ try{
+  await api("/api/admin/exclusions",{method:"POST",body:JSON.stringify({nif:$("excludeNif").value,company_name:$("excludeName").value,reason:$("excludeReason").value,notes:$("excludeNotes").value})});
+  status.textContent="Exclusão guardada. O NIF deixa de aparecer na pesquisa BASE.";
+  $("excludeNif").value="";$("excludeName").value="";$("excludeNotes").value="";
+  await loadExclusions();
+ }catch(e){status.textContent=e.message}
+};
+$("refreshExclusions").onclick=loadExclusions;
+
 $("searchBtn").onclick=searchDiscovery;
 document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
 $("crmButton").onclick=()=>showStatus("Envio bloqueado: a integração Dynamics ainda não foi configurada.");
