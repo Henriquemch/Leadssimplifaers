@@ -77,27 +77,40 @@ test("company list accepts a signed session cookie", async () => {
   assert.deepEqual((await response.json()).companies, []);
 });
 
-test("compact BASE import requires credentials and bounded normalized records", async () => {
+test("compact BASE import stores one company profile and rejects contract-row payloads", async () => {
   const denied = await app.fetch(new Request("https://leadpilot.test/internal/import/batch", {
     method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({ companies: [], procurements: [] })
+    body: JSON.stringify({ companies: [] })
   }), env);
   assert.equal(denied.status, 401);
+  let executed = 0;
+  const localEnv = { ...env, DB: { ...env.DB, async batch(statements) { executed = statements.length; return statements.map(() => ({ success: true })); } } };
   const accepted = await app.fetch(new Request("https://leadpilot.test/internal/import/batch", {
     method: "POST", headers: { authorization: "Bearer ingest-test-secret", "content-type": "application/json" },
-    body: JSON.stringify({
-      companies: [{ id: "nif:501000000", nif: "501000000", name: "Empresa BASE", evidence_type: "awardee" }],
-      procurements: [{ source_id: "base-123", company_id: "nif:501000000", company_name: "Empresa BASE", participant_role: "awardee", cpv: "45000000", contract_value: 1200 }]
-    })
-  }), env);
+    body: JSON.stringify({ companies: [{
+      id: "nif:501000000", nif: "501000000", name: "Empresa BASE", evidence_type: "awardee",
+      contract_count: 3, awardee_contract_count: 2, competitor_contract_count: 1,
+      awarded_value_total: 1200, latest_contract_date: "2026-10-01",
+      top_cpv_json: '[{"cpv":"45000000-7","contracts":2}]',
+      top_authorities_json: "[]", recent_contracts_json: "[]"
+    }] })
+  }), localEnv);
   assert.equal(accepted.status, 200);
-  const data = await accepted.json();
-  assert.equal(data.companies_received, 1);
-  assert.equal(data.procurements_received, 1);
-  assert.equal(data.statements_executed, 2);
+  assert.equal((await accepted.json()).profiles_saved, 1);
+  assert.equal(executed, 1);
+  const invalid = await app.fetch(new Request("https://leadpilot.test/internal/import/batch", {
+    method: "POST", headers: { authorization: "Bearer ingest-test-secret", "content-type": "application/json" },
+    body: JSON.stringify({ companies: [{ id: "nif:123", nif: "123", name: "Inválida" }] })
+  }), env);
+  assert.equal(invalid.status, 400);
+  const oldFormat = await app.fetch(new Request("https://leadpilot.test/internal/import/batch", {
+    method: "POST", headers: { authorization: "Bearer ingest-test-secret", "content-type": "application/json" },
+    body: JSON.stringify({ companies: [], procurements: [{ source_id: "raw-row" }] })
+  }), env);
+  assert.equal(oldFormat.status, 400);
   const oversized = await app.fetch(new Request("https://leadpilot.test/internal/import/batch", {
     method: "POST", headers: { authorization: "Bearer ingest-test-secret", "content-type": "application/json" },
-    body: JSON.stringify({ companies: Array.from({length: 101},(_,i)=>({id:String(i),name:"Empresa"})), procurements: [] })
+    body: JSON.stringify({ companies: Array.from({length: 51},(_,i)=>({id:"nif:50100000"+i,nif:"50100000"+i,name:"Empresa"})) })
   }), env);
   assert.equal(oversized.status, 400);
 });
@@ -207,18 +220,22 @@ test("decision-maker research allowed only for explicitly eligible company", asy
   assert.equal(response.status, 201);
 });
 
-test("procurement evidence endpoint returns compact summaries only", async () => {
-  let queriedSql = [];
+test("company evidence endpoint reads compact profile without procurement table", async () => {
+  let queriedSql = "";
   const localEnv = {
     ...env,
     DB: {
       prepare(sql) {
-        queriedSql.push(sql);
+        queriedSql = sql;
         return { bind(...values) { return { async all() {
-          if (sql.includes("COUNT(*) AS total_contracts")) return { results: [{ total_contracts: 3, total_value: 12000, latest_date: "2026-10-01" }] };
-          if (sql.includes("GROUP BY cpv") || sql.includes("GROUP BY contracting_authority")) return { results: [] };
-          return { results: [{ source_id: "base-1", description: "Serviços", contract_value: 4000 }] };
-        } }; } };
+          return { results: [{
+            contract_count: 3, awardee_contract_count: 2, competitor_contract_count: 1,
+            awarded_value_total: 12000, latest_contract_date: "2026-10-01",
+            top_cpv_json: '[{"cpv":"45000000-7","contracts":2}]',
+            top_authorities_json: '[{"contracting_authority":"Instituto Público","contracts":2}]',
+            recent_contracts_json: '[{"source_id":"base-1","participant_role":"awardee","date":"2026-10-01","description":"Serviços","value":4000}]'
+          }] };
+        } }; }
       }
     }
   };
@@ -228,11 +245,13 @@ test("procurement evidence endpoint returns compact summaries only", async () =>
   assert.equal(response.status, 200);
   const data = await response.json();
   assert.equal(data.summary.total_contracts, 3);
+  assert.equal(data.summary.awardee_contracts, 2);
+  assert.equal(data.summary.total_value, 12000);
   assert.equal(data.procurements.length, 1);
-  assert.deepEqual(data.top_cpv, []);
-  assert.deepEqual(data.top_authorities, []);
-  assert.equal(queriedSql.filter(sql => sql.includes("GROUP BY")).length, 2);
-  assert.ok(queriedSql.every(sql => !sql.includes("source_record")));
+  assert.equal(data.top_cpv[0].cpv, "45000000-7");
+  assert.equal(data.top_authorities[0].contracting_authority, "Instituto Público");
+  assert.ok(queriedSql.includes("recent_contracts_json"));
+  assert.ok(!queriedSql.includes("FROM procurements"));
 });
 
 test("company search accepts bounded filters", async () => {
