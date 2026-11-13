@@ -300,14 +300,14 @@ export default {
         };
         const evidence = ["awardee", "competitor_confirmed"].includes(item.evidence_type) ? item.evidence_type : "unverified";
         statements.push(env.DB.prepare(
-          `INSERT INTO companies (
+          `INSERT INTO discovery_profiles (
             id, nif, name, source_url, evidence_type, contract_count, awardee_contract_count,
             competitor_contract_count, awarded_value_total, latest_contract_date,
             top_cpv_json, top_authorities_json, recent_contracts_json, last_seen_at, updated_at
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
           ON CONFLICT(id) DO UPDATE SET
-            name=excluded.name, source_url=COALESCE(excluded.source_url, companies.source_url),
-            evidence_type=CASE WHEN companies.evidence_type = 'awardee' OR excluded.evidence_type = 'awardee' THEN 'awardee' WHEN companies.evidence_type = 'competitor_confirmed' OR excluded.evidence_type = 'competitor_confirmed' THEN 'competitor_confirmed' ELSE excluded.evidence_type END,
+            name=excluded.name, source_url=COALESCE(excluded.source_url, discovery_profiles.source_url),
+            evidence_type=CASE WHEN discovery_profiles.evidence_type = 'awardee' OR excluded.evidence_type = 'awardee' THEN 'awardee' WHEN discovery_profiles.evidence_type = 'competitor_confirmed' OR excluded.evidence_type = 'competitor_confirmed' THEN 'competitor_confirmed' ELSE excluded.evidence_type END,
             contract_count=excluded.contract_count, awardee_contract_count=excluded.awardee_contract_count,
             competitor_contract_count=excluded.competitor_contract_count, awarded_value_total=excluded.awarded_value_total,
             latest_contract_date=excluded.latest_contract_date, top_cpv_json=excluded.top_cpv_json,
