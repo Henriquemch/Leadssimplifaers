@@ -65,13 +65,24 @@ def rows_from_bytes(data,name):
         text=data.decode("utf-8-sig","replace")
         try:
             parsed=json.loads(text)
-            if isinstance(parsed,list): yield from parsed
+            if isinstance(parsed,list): yield from (x for x in parsed if isinstance(x,dict))
             elif isinstance(parsed,dict):
                 arr=next((v for v in parsed.values() if isinstance(v,list) and (not v or isinstance(v[0],dict))),None)
-                if arr is not None: yield from arr
+                if arr is not None: yield from (x for x in arr if isinstance(x,dict))
                 else: yield parsed
         except json.JSONDecodeError:
-            yield from csv.DictReader(io.StringIO(text))
+            parsed_lines=[]
+            for line in text.splitlines():
+                try:
+                    item=json.loads(line)
+                    if isinstance(item,dict): parsed_lines.append(item)
+                except Exception:
+                    parsed_lines=[]
+                    break
+            if parsed_lines:
+                yield from parsed_lines
+            else:
+                yield from csv.DictReader(io.StringIO(text))
 
 def main():
     with open(MANIFEST,encoding="utf-8") as f: manifest=json.load(f)
