@@ -170,8 +170,8 @@ def normalized_records(row, cutoff):
     return output
 
 
-def post_batch(worker_url, secret, companies, procurements):
-    payload = json.dumps({"companies": companies, "procurements": procurements}, ensure_ascii=False).encode()
+def post_batch(worker_url, secret, companies):
+    payload = json.dumps({"companies": companies}, ensure_ascii=False, separators=(",", ":")).encode()
     request = urllib.request.Request(
         worker_url.rstrip("/") + "/internal/import/batch", data=payload, method="POST",
         headers={"authorization": "Bearer " + secret, "content-type": "application/json"},
@@ -181,6 +181,77 @@ def post_batch(worker_url, secret, companies, procurements):
         if response.status >= 300 or not result.get("ok"):
             raise RuntimeError("Worker rejeitou lote: " + str(result))
         return result
+
+
+def empty_profile(company):
+    return {
+        "id": company["id"], "nif": company["nif"], "name": company["name"],
+        "evidence_type": company["evidence_type"], "source_url": company["source_url"],
+        "contract_count": 0, "awardee_contract_count": 0, "competitor_contract_count": 0,
+        "awarded_value_total": 0.0, "latest_contract_date": None,
+        "_cpv": {}, "_authorities": {}, "_recent": [],
+    }
+
+
+def add_profile_record(profiles, record):
+    company = record["company"]
+    procurement = record["procurement"]
+    profile = profiles.get(company["id"])
+    if profile is None:
+        profile = empty_profile(company)
+        profiles[company["id"]] = profile
+    elif company["evidence_type"] == "awardee":
+        profile["evidence_type"] = "awardee"
+
+    role = procurement["participant_role"]
+    profile["contract_count"] += 1
+    if role == "awardee":
+        profile["awardee_contract_count"] += 1
+        if procurement["contract_value"] is not None:
+            profile["awarded_value_total"] += procurement["contract_value"]
+    elif role == "competitor_confirmed":
+        profile["competitor_contract_count"] += 1
+
+    contract_date_value = procurement["publication_date"]
+    if contract_date_value and (profile["latest_contract_date"] is None or contract_date_value > profile["latest_contract_date"]):
+        profile["latest_contract_date"] = contract_date_value
+
+    cpv = procurement["cpv"]
+    if cpv:
+        profile["_cpv"][cpv] = profile["_cpv"].get(cpv, 0) + 1
+    authority = procurement["contracting_authority"]
+    if authority:
+        profile["_authorities"][authority] = profile["_authorities"].get(authority, 0) + 1
+
+    evidence = {
+        "source_id": procurement["source_id"],
+        "participant_role": role,
+        "date": contract_date_value,
+        "description": procurement["description"],
+        "cpv": cpv,
+        "authority": authority,
+        "value": procurement["contract_value"] if role == "awardee" else None,
+        "url": procurement["procedure_url"],
+    }
+    if not any(item["source_id"] == evidence["source_id"] for item in profile["_recent"]):
+        profile["_recent"].append(evidence)
+        profile["_recent"].sort(key=lambda item: item["date"] or "", reverse=True)
+        del profile["_recent"][3:]
+
+
+def finalize_profile(profile):
+    result = {key: value for key, value in profile.items() if not key.startswith("_")}
+    result["awarded_value_total"] = round(result["awarded_value_total"], 2)
+    result["top_cpv_json"] = json.dumps(
+        [{"cpv": key, "contracts": count} for key, count in sorted(profile["_cpv"].items(), key=lambda item: (-item[1], item[0]))[:5]],
+        ensure_ascii=False, separators=(",", ":"),
+    )
+    result["top_authorities_json"] = json.dumps(
+        [{"contracting_authority": key, "contracts": count} for key, count in sorted(profile["_authorities"].items(), key=lambda item: (-item[1], item[0]))[:5]],
+        ensure_ascii=False, separators=(",", ":"),
+    )
+    result["recent_contracts_json"] = json.dumps(profile["_recent"], ensure_ascii=False, separators=(",", ":"))
+    return result
 
 
 def main():
@@ -206,9 +277,9 @@ def main():
     if not resources:
         raise SystemExit("Não foram encontrados arquivos anuais contratos2021–2026 no manifesto.")
     resources.sort(key=lambda item: item[0])
-    totals = {"files": 0, "rows_seen": 0, "rows_in_window": 0, "companies": 0, "procurement_links": 0, "batches": 0}
-    companies_seen = set()
-    pending_companies, pending_procurements = OrderedDict(), []
+
+    totals = {"files": 0, "rows_seen": 0, "rows_in_window": 0, "companies": 0, "company_participations": 0, "batches": 0}
+    profiles = OrderedDict()
     for year, resource in resources:
         request = urllib.request.Request(resource["url"], headers={"User-Agent": "LeadPilot-BASE-import/1.0"})
         with urllib.request.urlopen(request, timeout=180) as response:
@@ -221,31 +292,24 @@ def main():
                 continue
             totals["rows_in_window"] += 1
             for record in records:
-                company = record["company"]
-                existing = pending_companies.get(company["id"])
-                if existing is None or company["evidence_type"] == "competitor_confirmed":
-                    pending_companies[company["id"]] = company
-                pending_procurements.append(record["procurement"])
-                if company["id"] not in companies_seen:
-                    companies_seen.add(company["id"])
-                    totals["companies"] = len(companies_seen)
-                totals["procurement_links"] += 1
-                if len(pending_companies) + len(pending_procurements) >= 80:
-                    companies = list(pending_companies.values())
-                    if not dry_run:
-                        post_batch(worker_url, secret, companies, pending_procurements)
-                    totals["batches"] += 1
-                    pending_companies.clear()
-                    pending_procurements.clear()
+                add_profile_record(profiles, record)
+                totals["company_participations"] += 1
         del data
-    if pending_companies or pending_procurements:
+
+    totals["companies"] = len(profiles)
+    batch_size = 50
+    ready = [finalize_profile(profile) for profile in profiles.values()]
+    for start in range(0, len(ready), batch_size):
+        batch = ready[start:start + batch_size]
         if not dry_run:
-            post_batch(worker_url, secret, list(pending_companies.values()), pending_procurements)
+            post_batch(worker_url, secret, batch)
         totals["batches"] += 1
+
     print(json.dumps({
         "mode": "dry_run" if dry_run else "imported",
         "cutoff": cutoff.isoformat(), "totals": totals,
-        "note": "Amostra completa dos ficheiros anuais selecionados; apenas adjudicatários e concorrentes explicitamente listados. Sem NIF válido, a entidade é ignorada. Nenhum payload bruto é guardado.",
+        "storage_model": "one company row with aggregate counters, top five CPVs, top five authorities and at most three recent contract references",
+        "note": "Apenas adjudicatários e concorrentes explicitamente listados com NIF válido. Valor acumulado considera apenas adjudicatários. Não são guardadas linhas integrais de contratos nem payloads brutos.",
     }, ensure_ascii=False, indent=2))
 
 
