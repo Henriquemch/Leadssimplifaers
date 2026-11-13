@@ -35,5 +35,5 @@ This is a **parallel migration branch**. It does not change the live Netlify sit
 - The five-year universe must be filtered by the contract's relevant date, not blindly by archive filename. The source itself notes that archive year and publication/contract dates can differ.
 - Do not store complete raw JSON in D1. Keep the original source URL, BASE contract ID, NIF, company name, CPV, procedure type, dates, amount, authority and a small evidence/provenance payload only.
 - Storage decision is pending the automated audit of the actual five-year archives. If one D1 database approaches its 500 MB free limit, evaluate year-based D1 sharding within the account-wide free allowance before importing; do not create databases or incur charges without approval.
-- Official source pages: Portal BASE/IMPIC dataset and the IMPIC explanation of data access methods. See project issue/notes for the audit run.
+- Official source pages: https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026 and https://www.base.gov.pt/Base4/pt/documentacao/formas-de-obter-dados-sobre-os-contratos-publicos/
 
