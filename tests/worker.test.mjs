@@ -228,6 +228,9 @@ test("procurement evidence endpoint returns compact summaries only", async () =>
   const data = await response.json();
   assert.equal(data.summary.total_contracts, 3);
   assert.equal(data.procurements.length, 1);
+  assert.deepEqual(data.top_cpv, []);
+  assert.deepEqual(data.top_authorities, []);
+  assert.equal(queriedSql.filter(sql => sql.includes("GROUP BY")).length, 2);
   assert.ok(queriedSql.every(sql => !sql.includes("source_record")));
 });
 
