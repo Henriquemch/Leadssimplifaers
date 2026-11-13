@@ -216,6 +216,7 @@ test("procurement evidence endpoint returns compact summaries only", async () =>
         queriedSql.push(sql);
         return { bind(...values) { return { async all() {
           if (sql.includes("COUNT(*) AS total_contracts")) return { results: [{ total_contracts: 3, total_value: 12000, latest_date: "2026-10-01" }] };
+          if (sql.includes("GROUP BY cpv") || sql.includes("GROUP BY contracting_authority")) return { results: [] };
           return { results: [{ source_id: "base-1", description: "Serviços", contract_value: 4000 }] };
         } }; } };
       }
