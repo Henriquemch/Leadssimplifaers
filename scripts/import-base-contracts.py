@@ -61,7 +61,9 @@ def pick(obj, *names):
 def normalize_nif(value):
     if value is None:
         return None
-    if isinstance(value, float) and value.is_integer():\n        value = int(value)\n    digits = re.sub(r"\D", "", str(value))
+    if isinstance(value, float) and value.is_integer():
+        value = int(value)
+    digits = re.sub(r"\D", "", str(value))
     return digits if len(digits) == 9 else None
 
 
