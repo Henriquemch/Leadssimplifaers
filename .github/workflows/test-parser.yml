@@ -7,6 +7,10 @@ on:
       - "tests/**"
       - "migrations/**"
       - "worker/**"
+      - "netlify/**"
+      - "index.html"
+      - "netlify.toml"
+      - "AUTH_SETUP.md"
       - "wrangler.toml"
       - ".github/workflows/test-parser.yml"
   workflow_dispatch:
