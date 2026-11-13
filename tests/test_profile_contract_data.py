@@ -100,5 +100,28 @@ class ImportMappingTests(unittest.TestCase):
 
 
 
+    def test_compact_profile_aggregates_contracts_and_keeps_only_three_recent_examples(self):
+        profiles = {}
+        for day in ("2025-01-01", "2025-02-01", "2025-03-01", "2025-04-01", "2025-05-01"):
+            row = {
+                "idcontrato": day,
+                "dataCelebracaoContrato": day,
+                "adjudicatarios": [{"nifEntContrato": "501000000", "descEntContrato": "Empresa"}],
+                "CPV": [{"cpvID": "45000000-7"}],
+                "precoContratual": 100,
+                "adjudicante": "NIPCEntidade=510342647|Entidade=Instituto Público",
+            }
+            for record in import_module.normalized_records(row, import_module.date(2024, 1, 1)):
+                import_module.add_profile_record(profiles, record)
+        result = import_module.finalize_profile(profiles["nif:501000000"])
+        self.assertEqual(result["contract_count"], 5)
+        self.assertEqual(result["awardee_contract_count"], 5)
+        self.assertEqual(result["awarded_value_total"], 500)
+        self.assertEqual(result["latest_contract_date"], "2025-05-01")
+        self.assertEqual(len(json.loads(result["recent_contracts_json"])), 3)
+        self.assertEqual(json.loads(result["top_cpv_json"])[0]["cpv"], "45000000-7")
+        self.assertNotIn("source_record", result)
+
+
 if __name__ == "__main__":
     unittest.main()
