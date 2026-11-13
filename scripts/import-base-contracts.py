@@ -261,7 +261,7 @@ def main():
     if not source:
         raise SystemExit("Manifesto sem a fonte oficial BASE de contratos.")
     today = date.today()
-    cutoff = today.replace(year=today.year - 5)
+    cutoff = today - timedelta(days=365)
     dry_run = os.getenv("LEADPILOT_DRY_RUN", "true").lower() != "false"
     worker_url = os.getenv("LEADPILOT_WORKER_URL", "")
     secret = os.getenv("INGEST_SECRET", "")
