@@ -259,7 +259,7 @@ export default {
           typeof item.sector === "string" ? item.sector.slice(0, 120) : null,
           typeof item.source_url === "string" ? item.source_url.slice(0, 500) : null, evidence));
       }
-      const allowedRoles = ["awardee", "unknown"];
+      const allowedRoles = ["awardee", "competitor_confirmed", "unknown"];
       for (const item of body.procurements) {
         if (!item || typeof item.source_id !== "string" || !item.source_id.trim() ||
             typeof item.company_id !== "string" || !item.company_id.trim() ||
