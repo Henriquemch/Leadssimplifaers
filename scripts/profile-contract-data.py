@@ -28,7 +28,15 @@ def rows_from_bytes(data,name):
         jsons=[n for n in members if n.lower().endswith((".json",".ndjson"))]
         excels=[n for n in members if n.lower().endswith(".xlsx")]
         csvs=[n for n in members if n.lower().endswith(".csv")]
-        if jsons:
+        if "xl/workbook.xml" in members:
+            wb=load_workbook(io.BytesIO(data),read_only=True,data_only=True)
+            ws=wb[wb.sheetnames[0]]
+            it=ws.iter_rows(values_only=True)
+            headers=[str(x or "").strip() for x in next(it)]
+            for vals in it:
+                yield {headers[i]:vals[i] for i in range(min(len(headers),len(vals))) if headers[i]}
+            wb.close()
+        elif jsons:
             raw=z.read(jsons[0])
             text=raw.decode("utf-8-sig","replace")
             try: parsed=json.loads(text)
