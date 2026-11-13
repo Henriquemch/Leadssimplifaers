@@ -1,0 +1,8 @@
+{
+  "status": "pending_first_automated_run",
+  "scope": {
+    "country": "Portugal",
+    "history_years": 5
+  },
+  "note": "Gerado automaticamente pelo workflow diário."
+}
