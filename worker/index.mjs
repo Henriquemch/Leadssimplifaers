@@ -28,9 +28,30 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/api/companies") {
       const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 50), 1), 100);
+      const filters = [];
+      const values = [];
+      const q = (url.searchParams.get("q") || "").trim().slice(0, 100);
+      if (q) {
+        filters.push("(name LIKE ? OR nif LIKE ? OR sector LIKE ?)");
+        values.push(`%${q}%`, `%${q}%`, `%${q}%`);
+      }
+      for (const key of ["qualification_status", "commercial_status", "evidence_type"]) {
+        const value = url.searchParams.get(key);
+        if (value) {
+          const allowed = {
+            qualification_status: ["pending", "approved", "rejected"],
+            commercial_status: ["pending_review", "eligible", "not_contact"],
+            evidence_type: ["competitor_confirmed", "awardee", "potential", "unverified"]
+          };
+          if (!allowed[key].includes(value)) return json({ ok: false, error: `Invalid ${key} filter.` }, 400);
+          filters.push(`${key} = ?`);
+          values.push(value);
+        }
+      }
+      const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
       const result = await env.DB.prepare(
-        "SELECT id, nif, name, municipality, district, sector, evidence_type, qualification_status, qualification_notes, customer_status, contacted_status, active_process_status, commercial_notes, commercial_status, source_url, last_seen_at FROM companies ORDER BY last_seen_at DESC LIMIT ?"
-      ).bind(limit).all();
+        `SELECT id, nif, name, municipality, district, sector, evidence_type, qualification_status, qualification_notes, customer_status, contacted_status, active_process_status, commercial_notes, commercial_status, source_url, last_seen_at FROM companies ${where} ORDER BY last_seen_at DESC LIMIT ?`
+      ).bind(...values, limit).all();
       return json({ ok: true, companies: result.results || [] });
     }
 
