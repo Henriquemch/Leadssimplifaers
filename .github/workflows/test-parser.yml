@@ -42,7 +42,6 @@ jobs:
           db.executescript(open("migrations/0005_compact_company_contract_profiles.sql", encoding="utf-8").read())
           db.executescript(open("migrations/0006_discovery_and_exclusions.sql", encoding="utf-8").read())
           db.executescript(open("migrations/0007_discovery_search_indexes.sql", encoding="utf-8").read())
-          db.executescript(open("migrations/0007_discovery_search_indexes.sql", encoding="utf-8").read())
           names = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
           expected = {"companies", "decision_makers", "approval_events", "import_runs", "source_files", "discovery_profiles", "lead_exclusions"}
           assert expected <= names, (expected - names)
@@ -56,5 +55,28 @@ jobs:
           PY
       - name: Validate Worker JavaScript syntax
         run: node --check worker/index.mjs
+      - name: Validate inline application JavaScript syntax
+        run: |
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          class Scripts(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.active = False
+                  self.parts = []
+              def handle_starttag(self, tag, attrs):
+                  if tag == 'script': self.active = True
+              def handle_endtag(self, tag):
+                  if tag == 'script': self.active = False
+              def handle_data(self, data):
+                  if self.active: self.parts.append(data)
+          parser = Scripts()
+          parser.feed(Path('index.html').read_text(encoding='utf-8'))
+          source = '\n'.join(parser.parts)
+          if not source.strip(): raise SystemExit('No inline JavaScript found')
+          Path('/tmp/leadpilot-inline.js').write_text(source, encoding='utf-8')
+          PY
+          node --check /tmp/leadpilot-inline.js
       - name: Run application and API tests
         run: node --test tests/*.test.mjs
