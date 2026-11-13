@@ -117,11 +117,14 @@ export default {
       const cpv = (url.searchParams.get("cpv") || "").trim().slice(0, 12);
       if (cpv) { filters.push("d.top_cpv_json LIKE ?"); values.push("%" + cpv + "%"); }
       const fromDate = (url.searchParams.get("from_date") || "").trim();
-      if (fromDate) { if (fromDate.length !== 10) return json({ok:false,error:"Invalid from_date."},400); filters.push("d.latest_contract_date >= ?"); values.push(fromDate); }
+      if (fromDate) { if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(fromDate) || Number.isNaN(Date.parse(fromDate))) return json({ok:false,error:"Invalid from_date."},400); filters.push("d.latest_contract_date >= ?"); values.push(fromDate); }
       const minValue = url.searchParams.get("min_value"), maxValue = url.searchParams.get("max_value");
-      if (minValue) { const n=Number(minValue); if(!Number.isFinite(n)||n<0)return json({ok:false,error:"Invalid min_value."},400); filters.push("d.awarded_value_total >= ?"); values.push(n); }
-      if (maxValue) { const n=Number(maxValue); if(!Number.isFinite(n)||n<0)return json({ok:false,error:"Invalid max_value."},400); filters.push("d.awarded_value_total <= ?"); values.push(n); }
-      const role = url.searchParams.get("role"); if (role === "awardee") filters.push("d.awardee_contract_count > 0"); if (role === "competitor_confirmed") filters.push("d.competitor_contract_count > 0");
+      let minNumber = null, maxNumber = null;
+      if (minValue !== null && minValue !== "") { minNumber=Number(minValue); if(!Number.isFinite(minNumber)||minNumber<0)return json({ok:false,error:"Invalid min_value."},400); filters.push("d.awarded_value_total >= ?"); values.push(minNumber); }
+      if (maxValue !== null && maxValue !== "") { maxNumber=Number(maxValue); if(!Number.isFinite(maxNumber)||maxNumber<0)return json({ok:false,error:"Invalid max_value."},400); filters.push("d.awarded_value_total <= ?"); values.push(maxNumber); }
+      if (minNumber !== null && maxNumber !== null && minNumber > maxNumber) return json({ok:false,error:"min_value cannot exceed max_value."},400);
+      const role = url.searchParams.get("role"); if (role && !["awardee","competitor_confirmed"].includes(role)) return json({ok:false,error:"Invalid role filter."},400); if (role === "awardee") filters.push("d.awardee_contract_count > 0"); if (role === "competitor_confirmed") filters.push("d.competitor_contract_count > 0");
+      if (!q && !cpv && minNumber === null && maxNumber === null && !fromDate) return json({ok:false,error:"Define pelo menos um filtro antes de pesquisar."},400);
       const sql = "SELECT d.id,d.nif,d.name,d.evidence_type,d.contract_count,d.awardee_contract_count,d.competitor_contract_count,d.awarded_value_total,d.latest_contract_date,d.top_cpv_json,d.top_authorities_json,d.recent_contracts_json FROM discovery_profiles d WHERE " + filters.join(" AND ") + " ORDER BY d.awarded_value_total DESC,d.latest_contract_date DESC LIMIT ?";
       const result = await env.DB.prepare(sql).bind(...values,limit).all(); return json({ok:true,companies:result.results||[],limit});
     }
