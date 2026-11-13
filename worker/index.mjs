@@ -108,6 +108,41 @@ export default {
     }
     if (!env.DB) return json({ ok: false, error: "D1 binding DB is not configured." }, 503);
 
+    if (request.method === "GET" && url.pathname === "/api/discovery/search") {
+      const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 30), 1), 30);
+      const filters = ["NOT EXISTS (SELECT 1 FROM companies l WHERE l.nif = d.nif)", "NOT EXISTS (SELECT 1 FROM lead_exclusions x WHERE x.nif = d.nif AND x.active = 1)"];
+      const values = [];
+      const q = (url.searchParams.get("q") || "").trim().slice(0, 100);
+      if (q) { filters.push("(d.name LIKE ? OR d.nif LIKE ?)"); values.push("%" + q + "%", "%" + q + "%"); }
+      const cpv = (url.searchParams.get("cpv") || "").trim().slice(0, 12);
+      if (cpv) { filters.push("d.top_cpv_json LIKE ?"); values.push("%" + cpv + "%"); }
+      const fromDate = (url.searchParams.get("from_date") || "").trim();
+      if (fromDate) { if (fromDate.length !== 10) return json({ok:false,error:"Invalid from_date."},400); filters.push("d.latest_contract_date >= ?"); values.push(fromDate); }
+      const minValue = url.searchParams.get("min_value"), maxValue = url.searchParams.get("max_value");
+      if (minValue) { const n=Number(minValue); if(!Number.isFinite(n)||n<0)return json({ok:false,error:"Invalid min_value."},400); filters.push("d.awarded_value_total >= ?"); values.push(n); }
+      if (maxValue) { const n=Number(maxValue); if(!Number.isFinite(n)||n<0)return json({ok:false,error:"Invalid max_value."},400); filters.push("d.awarded_value_total <= ?"); values.push(n); }
+      const role = url.searchParams.get("role"); if (role === "awardee") filters.push("d.awardee_contract_count > 0"); if (role === "competitor_confirmed") filters.push("d.competitor_contract_count > 0");
+      const sql = "SELECT d.id,d.nif,d.name,d.evidence_type,d.contract_count,d.awardee_contract_count,d.competitor_contract_count,d.awarded_value_total,d.latest_contract_date,d.top_cpv_json,d.top_authorities_json,d.recent_contracts_json FROM discovery_profiles d WHERE " + filters.join(" AND ") + " ORDER BY d.awarded_value_total DESC,d.latest_contract_date DESC LIMIT ?";
+      const result = await env.DB.prepare(sql).bind(...values,limit).all(); return json({ok:true,companies:result.results||[],limit});
+    }
+    if (request.method === "POST" && url.pathname === "/api/leads") {
+      const body=await request.json().catch(()=>null); const nif=typeof body?.nif==="string"?body.nif.replaceAll(" ","").replaceAll("-",""):"";
+      if(nif.length!==9||![...nif].every(ch=>ch>="0"&&ch<="9"))return json({ok:false,error:"A valid 9-digit NIF is required."},400);
+      const found=await env.DB.prepare("SELECT * FROM discovery_profiles WHERE nif=? LIMIT 1").bind(nif).all(); const p=found.results?.[0]; if(!p)return json({ok:false,error:"Discovery profile not found."},404);
+      const existing=await env.DB.prepare("SELECT id FROM companies WHERE nif=? LIMIT 1").bind(nif).all(); if(existing.results?.length)return json({ok:false,error:"Already registered as a lead."},409);
+      const excluded=await env.DB.prepare("SELECT nif FROM lead_exclusions WHERE nif=? AND active=1 LIMIT 1").bind(nif).all(); if(excluded.results?.length)return json({ok:false,error:"NIF blocked by administrative exclusion."},409);
+      const companyId="nif:"+nif;
+      await env.DB.prepare("INSERT INTO companies (id,nif,name,source_url,evidence_type,contract_count,awardee_contract_count,competitor_contract_count,awarded_value_total,latest_contract_date,top_cpv_json,top_authorities_json,recent_contracts_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(companyId,nif,p.name,p.source_url||null,p.evidence_type,p.contract_count,p.awardee_contract_count,p.competitor_contract_count,p.awarded_value_total,p.latest_contract_date,p.top_cpv_json,p.top_authorities_json,p.recent_contracts_json).run();
+      await env.DB.prepare("INSERT INTO company_events (id,company_id,event_type,summary) VALUES (?,?,'lead_added','Lead adicionado a partir da pesquisa BASE.')").bind(id(),companyId).run(); return json({ok:true,company_id:companyId,nif},201);
+    }
+    if (request.method === "GET" && url.pathname === "/api/admin/exclusions") { const result=await env.DB.prepare("SELECT nif,company_name,reason,notes,active,created_at,updated_at FROM lead_exclusions ORDER BY active DESC,updated_at DESC LIMIT 500").all(); return json({ok:true,exclusions:result.results||[]}); }
+    if (request.method === "POST" && url.pathname === "/api/admin/exclusions") {
+      const body=await request.json().catch(()=>null); const nif=typeof body?.nif==="string"?body.nif.replaceAll(" ","").replaceAll("-",""):""; if(nif.length!==9||![...nif].every(ch=>ch>="0"&&ch<="9"))return json({ok:false,error:"A valid 9-digit NIF is required."},400);
+      await env.DB.prepare("INSERT INTO lead_exclusions(nif,company_name,reason,notes,active) VALUES(?,?,?,?,1) ON CONFLICT(nif) DO UPDATE SET company_name=excluded.company_name,reason=excluded.reason,notes=excluded.notes,active=1,updated_at=CURRENT_TIMESTAMP,reactivated_at=NULL").bind(nif,body.company_name||null,body.reason||"manual",body.notes||null).run(); return json({ok:true,nif},201);
+    }
+    const exclusionParts=url.pathname.split("/"); if(request.method==="PATCH"&&exclusionParts.length===5&&exclusionParts[1]==="api"&&exclusionParts[2]==="admin"&&exclusionParts[3]==="exclusions"){
+      const body=await request.json().catch(()=>null); if(typeof body?.active!=="boolean")return json({ok:false,error:"active boolean required."},400); await env.DB.prepare("UPDATE lead_exclusions SET active=?,updated_at=CURRENT_TIMESTAMP,reactivated_at=CASE WHEN ?=0 THEN CURRENT_TIMESTAMP ELSE NULL END WHERE nif=?").bind(body.active?1:0,body.active?1:0,exclusionParts[4]).run(); return json({ok:true,nif:exclusionParts[4],active:body.active});
+    }
     if (request.method === "GET" && url.pathname === "/api/companies") {
       const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 50), 1), 100);
       const filters = [];
