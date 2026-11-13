@@ -136,7 +136,7 @@ export default {
       const excluded=await env.DB.prepare("SELECT nif FROM lead_exclusions WHERE nif=? AND active=1 LIMIT 1").bind(nif).all(); if(excluded.results?.length)return json({ok:false,error:"NIF blocked by administrative exclusion."},409);
       const companyId="nif:"+nif;
       await env.DB.prepare("INSERT INTO companies (id,nif,name,source_url,evidence_type,contract_count,awardee_contract_count,competitor_contract_count,awarded_value_total,latest_contract_date,top_cpv_json,top_authorities_json,recent_contracts_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(companyId,nif,p.name,p.source_url||null,p.evidence_type,p.contract_count,p.awardee_contract_count,p.competitor_contract_count,p.awarded_value_total,p.latest_contract_date,p.top_cpv_json,p.top_authorities_json,p.recent_contracts_json).run();
-      await env.DB.prepare("INSERT INTO company_events (id,company_id,event_type,summary) VALUES (?,?,'lead_added','Lead adicionado a partir da pesquisa BASE.')").bind(id(),companyId).run(); return json({ok:true,company_id:companyId,nif},201);
+      await env.DB.prepare("INSERT INTO company_events (id,company_id,event_type,summary) VALUES (?,?,'qualification_changed','Lead adicionado a partir da pesquisa BASE.')").bind(id(),companyId).run(); return json({ok:true,company_id:companyId,nif},201);
     }
     if (request.method === "GET" && url.pathname === "/api/admin/exclusions") { const result=await env.DB.prepare("SELECT nif,company_name,reason,notes,active,created_at,updated_at FROM lead_exclusions ORDER BY active DESC,updated_at DESC LIMIT 500").all(); return json({ok:true,exclusions:result.results||[]}); }
     if (request.method === "POST" && url.pathname === "/api/admin/exclusions") {
