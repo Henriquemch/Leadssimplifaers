@@ -13,7 +13,7 @@ const SESSION_TTL = 60 * 60 * 12;
 function base64url(bytes) {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/=/g, "").replace(/\\+/g, "-").replace(/\\//g, "_");
+  return btoa(binary).replaceAll("=", "").replaceAll("+", "-").replaceAll("/", "_");
 }
 function fromBase64url(value) {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
