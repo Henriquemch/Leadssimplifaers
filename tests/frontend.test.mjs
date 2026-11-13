@@ -23,7 +23,9 @@ test("frontend contains the five workflow tabs and no browser admin token", asyn
     assert.match(html, new RegExp('id="tab-' + tab + '"'));
   }
   assert.doesNotMatch(html, /ADMIN_TOKEN|INGEST_SECRET|SESSION_SECRET/);
-  const scripts = [...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)];
-  assert.equal(scripts.length, 1);
-  assert.doesNotThrow(() => new Function(scripts[0][1]));
+  const scriptStart = html.indexOf("<script>") + "<script>".length;
+  const scriptEnd = html.indexOf("</script>", scriptStart);
+  assert.ok(scriptStart >= 8 && scriptEnd > scriptStart);
+  assert.equal(html.indexOf("<script>", scriptEnd), -1);
+  assert.doesNotThrow(() => new Function(html.slice(scriptStart, scriptEnd)));
 });
