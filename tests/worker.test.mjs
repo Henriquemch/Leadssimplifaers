@@ -115,6 +115,57 @@ test("compact BASE import stores one company profile and rejects contract-row pa
   assert.equal(oversized.status, 400);
 });
 
+
+test("BASE discovery requires a filter and only returns bounded results", async () => {
+  const cookie = await adminCookie();
+  const broad = await app.fetch(new Request("https://leadpilot.test/api/discovery/search", {
+    headers: { cookie }
+  }), env);
+  assert.equal(broad.status, 400);
+  const filtered = await app.fetch(new Request("https://leadpilot.test/api/discovery/search?q=empresa&limit=500", {
+    headers: { cookie }
+  }), env);
+  assert.equal(filtered.status, 200);
+  assert.equal((await filtered.json()).limit, 30);
+});
+
+test("adding a BASE profile creates the lead and history in one D1 batch", async () => {
+  let batchSize = 0;
+  const localEnv = {
+    ...env,
+    DB: {
+      prepare(sql) {
+        return {
+          sql,
+          bind(...values) {
+            return {
+              sql, values,
+              async all() {
+                if (sql.includes("FROM discovery_profiles")) return { results: [{
+                  id: "nif:501000000", nif: "501000000", name: "Empresa BASE",
+                  source_url: "https://www.base.gov.pt/Base4/pt/", evidence_type: "awardee",
+                  contract_count: 2, awardee_contract_count: 2, competitor_contract_count: 0,
+                  awarded_value_total: 1200, latest_contract_date: "2026-10-01",
+                  top_cpv_json: "[]", top_authorities_json: "[]", recent_contracts_json: "[]"
+                }] };
+                return { results: [] };
+              }
+            };
+          }
+        };
+      },
+      async batch(statements) { batchSize = statements.length; return statements.map(() => ({ success: true })); }
+    }
+  };
+  const response = await app.fetch(new Request("https://leadpilot.test/api/leads", {
+    method: "POST",
+    headers: { cookie: await adminCookie(), origin: env.APP_ORIGIN, "content-type": "application/json" },
+    body: JSON.stringify({ nif: "501000000" })
+  }), localEnv);
+  assert.equal(response.status, 201);
+  assert.equal(batchSize, 2);
+});
+
 test("batch ingestion rejects missing credentials", async () => {
   const response = await app.fetch(new Request("https://leadpilot.test/internal/companies/batch", {
     method: "POST", headers: { "content-type": "application/json" },
