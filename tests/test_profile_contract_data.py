@@ -73,7 +73,8 @@ class ImportMappingTests(unittest.TestCase):
             "adjudicatarios": "[{'nifEntContrato': '501000000', 'descEntContrato': 'Adjudicatária Lda'}]",
             "concorrentes": "['502000000-Concorrente SA']",
             "CPV": "[{'cpvID': '45000000-7'}]",
-            "precoContratual": 2500,\n            "adjudicante": "NIPCEntidade=510342647|Entidade=Instituto Público",
+            "precoContratual": 2500,
+            "adjudicante": "NIPCEntidade=510342647|Entidade=Instituto Público",
         }
         records = import_module.normalized_records(row, import_module.date(2024, 1, 1))
         self.assertEqual([x["procurement"]["participant_role"] for x in records], ["awardee", "competitor_confirmed"])
