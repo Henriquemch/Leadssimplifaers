@@ -10,8 +10,8 @@ This is a **parallel migration branch**. It does not change the live Netlify sit
 - The existing Supabase schema and setup guide remain untouched as historical reference.
 
 ## Files
-- `migrations/0001_initial.sql`: SQLite/D1 equivalent of the initial six-table schema.
-- `worker/index.mjs`: initial API skeleton: health check, protected company read endpoint and protected batch upsert endpoint.
+- `migrations/0001_initial.sql`–`0004_*.sql`: D1 schema, prospecting workflow, removal of raw contract payloads, and support for multiple participants per BASE contract.
+- `worker/index.mjs`: authenticated dashboard API and protected compact BASE import endpoint (`/internal/import/batch`).\n- `scripts/import-base-contracts.py`: manual rolling five-year importer for BASE awardees and explicitly listed competitors.\n- `.github/workflows/import-base-contracts.yml`: manual workflow with dry-run enabled by default.
 - `wrangler.toml`: deployment configuration; database ID is intentionally a placeholder.
 - Secrets are not committed. Configure `ADMIN_TOKEN` and `INGEST_SECRET` as Worker secrets before exposing data endpoints.
 
