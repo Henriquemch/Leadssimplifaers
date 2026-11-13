@@ -205,7 +205,7 @@ def main():
             resources.append((int(match.group(1)), resource))
     if not resources:
         raise SystemExit("Não foram encontrados arquivos anuais contratos2021–2026 no manifesto.")
-    resources.sort()
+    resources.sort(key=lambda item: item[0])
     totals = {"files": 0, "rows_seen": 0, "rows_in_window": 0, "companies": 0, "procurement_links": 0, "batches": 0}
     companies_seen = set()
     pending_companies, pending_procurements = OrderedDict(), []
