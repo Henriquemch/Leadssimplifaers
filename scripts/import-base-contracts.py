@@ -18,7 +18,7 @@ _parser = module_from_spec(_parser_spec)
 _parser_spec.loader.exec_module(_parser)
 rows_from_bytes = _parser.rows_from_bytes
 
-NIF_RE = re.compile(r"(?<!\\d)(\\d{9})(?!\\d)")
+NIF_RE = re.compile(r"(?<!\d)(\d{9})(?!\d)")
 RESOURCE_YEAR_RE = re.compile(r"contratos(202[1-6])", re.I)
 
 
@@ -61,7 +61,7 @@ def pick(obj, *names):
 def normalize_nif(value):
     if value is None:
         return None
-    if isinstance(value, float) and value.is_integer():\n        value = int(value)\n    digits = re.sub(r"\\D", "", str(value))
+    if isinstance(value, float) and value.is_integer():\n        value = int(value)\n    digits = re.sub(r"\D", "", str(value))
     return digits if len(digits) == 9 else None
 
 
@@ -71,7 +71,7 @@ def parse_entity(item):
         name = pick(item, "descEntContrato", "Entidade", "nome", "Nome", "designacao", "denominacao")
         return (nif, str(name).strip() if name else None)
     if isinstance(item, str):
-        match = re.match(r"^\\s*(\\d{9})\\s*[-–|:]\\s*(.+?)\\s*$", item)
+        match = re.match(r"^\s*(\d{9})\s*[-–|:]\s*(.+?)\s*$", item)
         if match:
             return match.group(1), match.group(2)
     return None, None
@@ -97,7 +97,7 @@ def cpv_code(value):
             if code:
                 return str(code)[:30]
         elif isinstance(entry, str):
-            match = re.search(r"\\d{8}-\\d", entry)
+            match = re.search(r"\d{8}-\d", entry)
             if match:
                 return match.group(0)
     return None
