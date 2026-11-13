@@ -10,8 +10,8 @@ This is a **parallel migration branch**. It does not change the live Netlify sit
 - The existing Supabase schema and setup guide remain untouched as historical reference.
 
 ## Files
-- `migrations/0001_initial.sql`–`0004_*.sql`: D1 schema, prospecting workflow, removal of raw contract payloads, and support for multiple participants per BASE contract.
-- `worker/index.mjs`: authenticated dashboard API and protected compact BASE import endpoint (`/internal/import/batch`).\n- `scripts/import-base-contracts.py`: manual rolling five-year importer for BASE awardees and explicitly listed competitors.\n- `.github/workflows/import-base-contracts.yml`: manual workflow with dry-run enabled by default.
+- `migrations/0001_initial.sql`–`0005_*.sql`: D1 schema and prospecting workflow. Migration 0005 replaces individual procurement rows with one compact BASE profile per company.
+- `worker/index.mjs`: authenticated dashboard API and protected compact BASE profile import endpoint (`/internal/import/batch`); it stores company aggregates and at most three recent evidence references, not individual contract rows.\n- `scripts/import-base-contracts.py`: manual rolling five-year importer for BASE awardees and explicitly listed competitors.\n- `.github/workflows/import-base-contracts.yml`: manual workflow with dry-run enabled by default.
 - `wrangler.toml`: deployment configuration; database ID is intentionally a placeholder.
 - Secrets are not committed. Configure `ADMIN_TOKEN` and `INGEST_SECRET` as Worker secrets before exposing data endpoints.
 
@@ -37,3 +37,12 @@ This is a **parallel migration branch**. It does not change the live Netlify sit
 - Storage decision is pending the automated audit of the actual five-year archives. If one D1 database approaches its 500 MB free limit, evaluate year-based D1 sharding within the account-wide free allowance before importing; do not create databases or incur charges without approval.
 - Official source pages: https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026 and https://www.base.gov.pt/Base4/pt/documentacao/formas-de-obter-dados-sobre-os-contratos-publicos/
 
+
+## Cost and storage policy (13 Nov 2026)
+- Do not import 3.5 million company-contract links. The full dry-run identified 68,687 companies and 3,502,896 participant links; persisting every link would create unnecessary storage and ingestion work.
+- Migration 0005 drops the unused `procurements` table and keeps the company workflow in `companies`.
+- Each company stores only counts (all participations, awardee participations, confirmed competitor participations), total awarded value, latest contract date, top five CPVs, top five contracting authorities and at most three recent contract references.
+- Contract value is attributed only to awardees, never to competitors. A competitor is counted only when explicitly listed in the BASE competitors field.
+- Import batches contain at most 50 company profiles and one D1 statement per company. The importer aggregates locally before sending; no contract-level rows or raw archive payloads are sent to D1.
+- This reduces the expected import from tens of thousands of tiny requests and millions of rows to approximately 1,374 company profiles / batches (based on the current 68,687-company dry-run). The actual batch count is 1,374 at 50 profiles per batch.
+- Keep GitHub Actions dry-run enabled until Cloudflare free-plan limits, database size, Worker request quotas and recurring source-download costs are checked. No paid plan, billing upgrade or automatic production import is authorized.
