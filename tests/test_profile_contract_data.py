@@ -73,12 +73,12 @@ class ImportMappingTests(unittest.TestCase):
             "adjudicatarios": "[{'nifEntContrato': '501000000', 'descEntContrato': 'Adjudicatária Lda'}]",
             "concorrentes": "['502000000-Concorrente SA']",
             "CPV": "[{'cpvID': '45000000-7'}]",
-            "precoContratual": 2500,
+            "precoContratual": 2500,\n            "adjudicante": "NIPCEntidade=510342647|Entidade=Instituto Público",
         }
         records = import_module.normalized_records(row, import_module.date(2024, 1, 1))
         self.assertEqual([x["procurement"]["participant_role"] for x in records], ["awardee", "competitor_confirmed"])
         self.assertEqual(records[0]["procurement"]["cpv"], "45000000-7")
-        self.assertEqual(records[1]["company"]["id"], "nif:502000000")
+        self.assertEqual(records[1]["company"]["id"], "nif:502000000")\n        self.assertEqual(records[0]["procurement"]["contracting_authority"], "Instituto Público")
 
     def test_excludes_contracts_outside_rolling_window(self):
         row = {
