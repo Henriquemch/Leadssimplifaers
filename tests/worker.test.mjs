@@ -6,8 +6,7 @@ const env = {
   DB: {
     prepare(sql) {
       return {
-        bind(...values) { return { sql, values }; },
-        async all() { return { results: [] }; }
+        bind(...values) { return { sql, values, async all() { return { results: [] }; } }; }
       };
     },
     async batch(statements) { return statements.map(() => ({ success: true })); }
