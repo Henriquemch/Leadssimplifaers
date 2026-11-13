@@ -1,0 +1,26 @@
+name: Profile official BASE contract files
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "47 6 * * 1"
+permissions:
+  contents: read
+jobs:
+  profile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Refresh official source manifest
+        run: node scripts/check-sources.mjs > data/source-manifest.json
+      - name: Inspect annual contract files
+        run: python scripts/profile-contract-data.py
+      - name: Save schema audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: leadpilot-contract-schema-audit
+          path: artifacts/contract-schema-audit.json
+          retention-days: 14
