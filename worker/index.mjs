@@ -137,6 +137,19 @@ export default {
       return json({ ok: true, companies: result.results || [] });
     }
 
+    const procurementMatch = url.pathname.match(/^\/api\/companies\/([^/]+)\/procurements$/);
+    if (request.method === "GET" && procurementMatch) {
+      const companyId = decodeURIComponent(procurementMatch[1]);
+      const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 20), 1), 20);
+      const summary = await env.DB.prepare(
+        "SELECT COUNT(*) AS total_contracts, COALESCE(SUM(contract_value), 0) AS total_value, MAX(publication_date) AS latest_date FROM procurements WHERE company_id = ?"
+      ).bind(companyId).all();
+      const rows = await env.DB.prepare(
+        "SELECT source_id, participant_role, procedure_type, cpv, description, contracting_authority, contract_value, publication_date, procedure_url FROM procurements WHERE company_id = ? ORDER BY publication_date DESC LIMIT ?"
+      ).bind(companyId, limit).all();
+      return json({ ok: true, summary: summary.results?.[0] || { total_contracts: 0, total_value: 0, latest_date: null }, procurements: rows.results || [] });
+    }
+
     const qualificationMatch = url.pathname.match(/^\/api\/companies\/([^/]+)\/qualification$/);
     if (request.method === "PATCH" && qualificationMatch) {
       const companyId = decodeURIComponent(qualificationMatch[1]);
