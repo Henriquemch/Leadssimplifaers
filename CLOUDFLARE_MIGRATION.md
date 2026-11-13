@@ -38,6 +38,16 @@ This is a **parallel migration branch**. It does not change the live Netlify sit
 - Official source pages: https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026 and https://www.base.gov.pt/Base4/pt/documentacao/formas-de-obter-dados-sobre-os-contratos-publicos/
 
 
+## Local compact-profile dry-run (Windows)
+
+GitHub only offers `workflow_dispatch` for a workflow file present on the repository's default branch. We intentionally do not change `main` just to expose that button. To avoid consuming hosted Actions minutes, run the compact-profile measurement locally instead:
+
+1. Download the repository branch `migration/cloudflare-d1-foundation` as a ZIP and extract it.
+2. Double-click `scripts\\run-base-profile-dry-run.bat`.
+3. Keep the terminal open until the JSON summary appears. It reports `profile_payload_bytes`, `average_profile_bytes` and `estimated_batch_count`.
+
+The batch file forces `LEADPILOT_DRY_RUN=true`; it does not configure or call a Worker, and it cannot write to D1. It requires Python 3.12+ and an internet connection to download the public BASE source archives and install the free `openpyxl` parser dependency. No GitHub Actions minutes are used. The byte total is the compact JSON payload size, not a final SQLite/D1 billing measurement.
+
 ## Cost and storage policy (13 Nov 2026)
 - Do not import 3.5 million company-contract links. The full dry-run identified 68,687 companies and 3,502,896 participant links; persisting every link would create unnecessary storage and ingestion work.
 - Migration 0005 drops the unused `procurements` table and keeps the company workflow in `companies`.
