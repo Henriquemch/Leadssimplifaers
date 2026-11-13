@@ -39,15 +39,16 @@ jobs:
           db.executescript(open("migrations/0002_prospecting_workflow.sql", encoding="utf-8").read())
           db.executescript(open("migrations/0003_remove_raw_procurement_payload.sql", encoding="utf-8").read())
           db.executescript(open("migrations/0004_multi_company_procurements.sql", encoding="utf-8").read())
+          db.executescript(open("migrations/0005_compact_company_contract_profiles.sql", encoding="utf-8").read())
           names = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-          expected = {"companies", "procurements", "decision_makers", "approval_events", "import_runs", "source_files"}
+          expected = {"companies", "decision_makers", "approval_events", "import_runs", "source_files"}
           assert expected <= names, (expected - names)
           company_columns = {row[1] for row in db.execute("PRAGMA table_info(companies)")}
           assert {"qualification_status", "customer_status", "contacted_status", "active_process_status", "commercial_status"} <= company_columns
           assert "company_events" in names
-          procurement_columns = {row[1] for row in db.execute("PRAGMA table_info(procurements)")}
-          assert "source_record" not in procurement_columns
-          assert {"source_id", "company_id", "participant_role"} <= procurement_columns
+          assert "procurements" not in names
+          profile_columns = {row[1] for row in db.execute("PRAGMA table_info(companies)")}
+          assert {"contract_count", "awardee_contract_count", "competitor_contract_count", "awarded_value_total", "top_cpv_json", "top_authorities_json", "recent_contracts_json"} <= profile_columns
           print("D1 schema and prospecting workflow OK:", ", ".join(sorted(expected)))
           PY
       - name: Validate Worker JavaScript syntax
