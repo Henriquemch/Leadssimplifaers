@@ -201,7 +201,8 @@ def main():
     if not resources:
         raise SystemExit("Não foram encontrados arquivos anuais contratos2021–2026 no manifesto.")
     resources.sort()
-    totals = {"files": 0, "rows_seen": 0, "rows_in_window": 0, "companies": 0, "procurement_links": 0, "batches": 0}\n    companies_seen = set()
+    totals = {"files": 0, "rows_seen": 0, "rows_in_window": 0, "companies": 0, "procurement_links": 0, "batches": 0}
+    companies_seen = set()
     pending_companies, pending_procurements = OrderedDict(), []
     for year, resource in resources:
         request = urllib.request.Request(resource["url"], headers={"User-Agent": "LeadPilot-BASE-import/1.0"})
@@ -220,7 +221,9 @@ def main():
                 if existing is None or company["evidence_type"] == "competitor_confirmed":
                     pending_companies[company["id"]] = company
                 pending_procurements.append(record["procurement"])
-                if company["id"] not in companies_seen:\n                    companies_seen.add(company["id"])\n                    totals["companies"] = len(companies_seen)
+                if company["id"] not in companies_seen:
+                    companies_seen.add(company["id"])
+                    totals["companies"] = len(companies_seen)
                 totals["procurement_links"] += 1
                 if len(pending_companies) + len(pending_procurements) >= 80:
                     companies = list(pending_companies.values())
