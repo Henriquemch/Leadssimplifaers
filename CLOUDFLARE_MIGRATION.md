@@ -1,58 +1,74 @@
 # Cloudflare D1 + Workers — migration foundation
 
-This is a **parallel migration branch**. It does not change the live Netlify site or the `main` branch.
+This is a **parallel staging migration branch**. It does not change the live Netlify site or the `main` branch.
 
-## Components
-- Netlify continues to host the existing static dashboard.
-- Cloudflare Worker is the API entry point.
-- Cloudflare D1 stores normalized records.
-- GitHub Actions remains responsible for downloading and parsing official BASE datasets; it will send small idempotent batches to the Worker.
-- The existing Supabase schema and setup guide remain untouched as historical reference.
+## Current infrastructure state
 
-## Files
-- `migrations/0001_initial.sql`–`0005_*.sql`: D1 schema and prospecting workflow. Migration 0005 replaces individual procurement rows with one compact BASE profile per company.
-- `worker/index.mjs`: authenticated dashboard API and protected compact BASE profile import endpoint (`/internal/import/batch`); it stores company aggregates and at most three recent evidence references, not individual contract rows.\n- `scripts/import-base-contracts.py`: manual rolling five-year importer for BASE awardees and explicitly listed competitors.\n- `.github/workflows/import-base-contracts.yml`: manual workflow with dry-run enabled by default.
-- `wrangler.toml`: deployment configuration; database ID is intentionally a placeholder.
-- Secrets are not committed. Configure `ADMIN_TOKEN` and `INGEST_SECRET` as Worker secrets before exposing data endpoints.
+- Cloudflare D1 database `leadpilot` has been created manually by the account owner.
+- D1 database ID: `fcea37de-694c-4bc2-ad72-4b70c8e21740`.
+- The database is currently empty: migrations have not yet been applied and no BASE records have been imported.
+- No Worker has been deployed and no Cloudflare secrets have been configured.
+- `wrangler.toml` targets a staging Worker named `leadpilot-api-dev`, with `APP_ENV = "staging"`, and binds the existing D1 database as `DB`.
+- The production Netlify site and `main` branch remain untouched.
 
-## Safety and current limits
-- No Cloudflare account, D1 database, Worker deployment, API secret or data import has been created.
-- `/health` reveals only service/database configuration.
-- Company read and ingestion endpoints reject requests without server-side bearer secrets.
-- The ingestion endpoint caps batches at 100 and validates stable IDs and names.
-- The importer is not yet connected to Portal BASE. Do not treat this branch as a working CRM until schema, API, authentication, importer and live smoke tests pass.
-- Do not merge this branch to `main` until tests pass and D1 capacity is estimated from actual source files.
+## Architecture
 
-## Next steps
-1. Validate parser tests and the actual source file formats/sizes.
-2. Add Worker unit tests and a D1 local integration test.
-3. Implement authentication/session flow for the dashboard without exposing secrets in browser code.
-4. Implement incremental, idempotent BASE import and storage-size measurement.
-5. Only then create the Cloudflare D1 database and deploy the Worker.
+- Netlify hosts the static dashboard and proxies `/.netlify/functions/leadpilot/*`.
+- The Cloudflare Worker is the API entry point.
+- Cloudflare D1 stores compact company profiles and the manually admitted lead/CRM workflow.
+- GitHub Actions downloads and parses official BASE datasets; it sends compact, idempotent batches only after the Worker is configured and a real import is explicitly authorized.
+- The current import scope is a rolling 12-month window.
 
-## Official BASE source findings (13 Nov 2026)
-- The IMPIC dataset is published as annual archives (e.g. `contratos2024.zip`, `contratos2025.zip`, `contratos2026.zip`) and is updated by the source. A third-party public-data audit reports 672,724 records across 2024–2026, which is useful as a scale indicator but is not a substitute for our own full-file audit.
-- The five-year universe must be filtered by the contract's relevant date, not blindly by archive filename. The source itself notes that archive year and publication/contract dates can differ.
-- Do not store complete raw JSON in D1. Keep the original source URL, BASE contract ID, NIF, company name, CPV, procedure type, dates, amount, authority and a small evidence/provenance payload only.
-- Storage decision is pending the automated audit of the actual five-year archives. If one D1 database approaches its 500 MB free limit, evaluate year-based D1 sharding within the account-wide free allowance before importing; do not create databases or incur charges without approval.
-- Official source pages: https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026 and https://www.base.gov.pt/Base4/pt/documentacao/formas-de-obter-dados-sobre-os-contratos-publicos/
+## Important files
 
+- `migrations/`: D1 schema and incremental migrations, including compact discovery profiles and lead exclusions.
+- `worker/index.mjs`: authenticated API, discovery search, manual lead admission, exclusion management and protected BASE import endpoint.
+- `scripts/import-base-contracts.py` and `scripts/profile-contract-data.py`: BASE parsing and compact profile aggregation.
+- `.github/workflows/test-parser.yml`: parser, migration and frontend syntax checks.
+- `.github/workflows/import-base-contracts.yml`: import workflow; push-triggered runs are forced into dry-run mode.
+- `netlify/functions/leadpilot.mjs`: same-origin Netlify proxy. It requires `LEADPILOT_WORKER_URL` before it forwards requests.
 
-## Local compact-profile dry-run (Windows)
+## Data minimization and admission rules
 
-GitHub only offers `workflow_dispatch` for a workflow file present on the repository's default branch. We intentionally do not change `main` just to expose that button. To avoid consuming hosted Actions minutes, run the compact-profile measurement locally instead:
+- BASE discovery profiles are separate from admitted leads.
+- Search results do not automatically become CRM leads. A user must explicitly choose **Adicionar ao LeadPilot**.
+- Profiles contain company identity, aggregate participation/awardee counts, awarded-value totals, latest contract date, top CPVs/authorities and a small number of recent evidence references.
+- No raw ZIP archives, complete contract rows or full source payloads are stored in D1.
+- The current search CPV filter matches the stored top-five CPV profile exactly; it does not search every historical CPV.
+- Existing leads and active exclusion records are suppressed from discovery results.
+- Exclusion reasons include current customer, active process, do not contact, duplicate, other and manual.
+- Decision-maker research remains a later, explicit qualification step. No automatic CRM/Dynamics submission is implemented.
 
-1. Download the repository branch `migration/cloudflare-d1-foundation` as a ZIP and extract it.
-2. Double-click `scripts\\run-base-profile-dry-run.bat`.
-3. Keep the terminal open until the JSON summary appears. It reports `profile_payload_bytes`, `average_profile_bytes` and `estimated_batch_count`.
+## Validation already completed
 
-The batch file forces `LEADPILOT_DRY_RUN=true`; it does not configure or call a Worker, and it cannot write to D1. It requires Python 3.12+ and an internet connection to download the public BASE source archives and install the free `openpyxl` parser dependency. No GitHub Actions minutes are used. The byte total is the compact JSON payload size, not a final SQLite/D1 billing measurement.
+- Rolling 12-month dry-run cutoff: 2025-11-13.
+- Source archives processed: 4.
+- Source rows seen: 913,078.
+- Rows in the 12-month window: 425,496.
+- Companies profiled: 36,002.
+- Company participations aggregated: 662,478.
+- Estimated import batches: 721.
+- Compact JSON transfer payload: 50,166,314 bytes (about 50.2 MB); this is **not** a measurement of final D1 storage or billing.
+- Latest parser/Worker/frontend CI run passed on commit `f436c029da6eebe44a093dd430ca1b001d51f627`. A new run is triggered by subsequent branch commits.
 
-## Cost and storage policy (13 Nov 2026)
-- Do not import 3.5 million company-contract links. The full dry-run identified 68,687 companies and 3,502,896 participant links; persisting every link would create unnecessary storage and ingestion work.
-- Migration 0005 drops the unused `procurements` table and keeps the company workflow in `companies`.
-- Each company stores only counts (all participations, awardee participations, confirmed competitor participations), total awarded value, latest contract date, top five CPVs, top five contracting authorities and at most three recent contract references.
-- Contract value is attributed only to awardees, never to competitors. A competitor is counted only when explicitly listed in the BASE competitors field.
-- Import batches contain at most 50 company profiles and one D1 statement per company. The importer aggregates locally before sending; no contract-level rows or raw archive payloads are sent to D1.
-- This reduces the expected import from tens of thousands of tiny requests and millions of rows to approximately 1,374 company profiles / batches (based on the current 68,687-company dry-run). The actual batch count is 1,374 at 50 profiles per batch.
-- Keep GitHub Actions dry-run enabled until Cloudflare free-plan limits, database size, Worker request quotas and recurring source-download costs are checked. No paid plan, billing upgrade or automatic production import is authorized.
+## Secrets and environment
+
+Do not commit secrets or paste them into chat. Before enabling the staging Worker, configure these as Worker secrets:
+
+- `ADMIN_PASSWORD`
+- `SESSION_SECRET` (at least 32 characters)
+- `INGEST_SECRET`
+
+Configure `APP_ORIGIN` as a normal Worker environment variable using the exact Netlify **preview** origin during testing. Configure Netlify's `LEADPILOT_WORKER_URL` only in the preview environment and only after the staging Worker has been deployed and verified.
+
+The current authentication setup uses server-side session cookies. Keep the Netlify proxy in front of the Worker so the browser uses the same origin. Never expose secrets in frontend code.
+
+## Safe next steps
+
+1. Review and validate the Worker deployment and authentication configuration.
+2. Deploy only the staging Worker `leadpilot-api-dev`; do not deploy to production.
+3. Apply D1 migrations to the existing `leadpilot` database.
+4. Configure preview-only Netlify variables and test login, discovery, manual lead admission and exclusions with controlled test data.
+5. Measure actual D1 storage using a small, explicitly approved import before considering the full 12-month import.
+
+No production deployment, production environment changes, paid plan, billing upgrade, or real BASE import is authorized by this document. Do not merge this branch into `main` without the user's explicit approval.
