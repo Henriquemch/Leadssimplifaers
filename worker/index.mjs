@@ -243,7 +243,7 @@ export default {
           return json({ ok: false, error: "Every company needs a stable id and non-empty name." }, 400);
         }
         companyIds.add(item.id);
-        const evidence = item.evidence_type === "awardee" ? "awardee" : "unverified";
+        const evidence = ["awardee", "competitor_confirmed"].includes(item.evidence_type) ? item.evidence_type : "unverified";
         statements.push(env.DB.prepare(
           `INSERT INTO companies (id, nif, name, municipality, district, sector, source_url, evidence_type, last_seen_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
