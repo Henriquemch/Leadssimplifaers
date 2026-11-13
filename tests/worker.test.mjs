@@ -77,6 +77,31 @@ test("company list accepts a signed session cookie", async () => {
   assert.deepEqual((await response.json()).companies, []);
 });
 
+test("compact BASE import requires credentials and bounded normalized records", async () => {
+  const denied = await app.fetch(new Request("https://leadpilot.test/internal/import/batch", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ companies: [], procurements: [] })
+  }), env);
+  assert.equal(denied.status, 401);
+  const accepted = await app.fetch(new Request("https://leadpilot.test/internal/import/batch", {
+    method: "POST", headers: { authorization: "Bearer ingest-test-secret", "content-type": "application/json" },
+    body: JSON.stringify({
+      companies: [{ id: "nif:501000000", nif: "501000000", name: "Empresa BASE", evidence_type: "awardee" }],
+      procurements: [{ source_id: "base-123", company_id: "nif:501000000", company_name: "Empresa BASE", participant_role: "awardee", cpv: "45000000", contract_value: 1200 }]
+    })
+  }), env);
+  assert.equal(accepted.status, 200);
+  const data = await accepted.json();
+  assert.equal(data.companies_received, 1);
+  assert.equal(data.procurements_received, 1);
+  assert.equal(data.statements_executed, 2);
+  const oversized = await app.fetch(new Request("https://leadpilot.test/internal/import/batch", {
+    method: "POST", headers: { authorization: "Bearer ingest-test-secret", "content-type": "application/json" },
+    body: JSON.stringify({ companies: Array.from({length: 101},(_,i)=>({id:String(i),name:"Empresa"})), procurements: [] })
+  }), env);
+  assert.equal(oversized.status, 400);
+});
+
 test("batch ingestion rejects missing credentials", async () => {
   const response = await app.fetch(new Request("https://leadpilot.test/internal/companies/batch", {
     method: "POST", headers: { "content-type": "application/json" },
