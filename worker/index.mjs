@@ -71,7 +71,7 @@ export default {
         env.DB.prepare("UPDATE companies SET customer_status = ?, contacted_status = ?, active_process_status = ?, commercial_notes = ?, commercial_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
           .bind(body.customer_status, body.contacted_status, body.active_process_status, notes, body.commercial_status, companyId),
         env.DB.prepare("INSERT INTO company_events (id, company_id, event_type, summary) VALUES (?, ?, 'commercial_check_changed', ?)")
-          .bind(id(), companyId, `Verificação comercial atualizada; estado: ${body.commercial_status}`)
+          .bind(id(), companyId, `Cliente=${body.customer_status}; contactada=${body.contacted_status}; processo=${body.active_process_status}; estado=${body.commercial_status}`)
       ]);
       return json({ ok: true, company_id: companyId, commercial_status: body.commercial_status });
     }
