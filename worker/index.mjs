@@ -228,6 +228,70 @@ export default {
       return json({ ok: true, decision_maker_id: personId }, 201);
     }
 
+    if (request.method === "POST" && url.pathname === "/internal/import/batch") {
+      if (!authorized(request, env.INGEST_SECRET)) return json({ ok: false, error: "Unauthorized" }, 401);
+      const body = await request.json().catch(() => null);
+      if (!body || !Array.isArray(body.companies) || !Array.isArray(body.procurements) ||
+          body.companies.length + body.procurements.length > 100) {
+        return json({ ok: false, error: "Expected companies and procurements arrays with at most 100 combined records." }, 400);
+      }
+      const statements = [];
+      const companyIds = new Set();
+      for (const item of body.companies) {
+        if (!item || typeof item.id !== "string" || !item.id.trim() ||
+            typeof item.name !== "string" || !item.name.trim()) {
+          return json({ ok: false, error: "Every company needs a stable id and non-empty name." }, 400);
+        }
+        companyIds.add(item.id);
+        const evidence = item.evidence_type === "awardee" ? "awardee" : "unverified";
+        statements.push(env.DB.prepare(
+          `INSERT INTO companies (id, nif, name, municipality, district, sector, source_url, evidence_type, last_seen_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+           ON CONFLICT(id) DO UPDATE SET nif=excluded.nif, name=excluded.name,
+             municipality=COALESCE(excluded.municipality, companies.municipality),
+             district=COALESCE(excluded.district, companies.district),
+             sector=COALESCE(excluded.sector, companies.sector),
+             source_url=COALESCE(excluded.source_url, companies.source_url),
+             evidence_type=excluded.evidence_type, last_seen_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP`
+        ).bind(item.id, item.nif || null, item.name.trim().slice(0, 200),
+          typeof item.municipality === "string" ? item.municipality.slice(0, 100) : null,
+          typeof item.district === "string" ? item.district.slice(0, 100) : null,
+          typeof item.sector === "string" ? item.sector.slice(0, 120) : null,
+          typeof item.source_url === "string" ? item.source_url.slice(0, 500) : null, evidence));
+      }
+      const allowedRoles = ["awardee", "unknown"];
+      for (const item of body.procurements) {
+        if (!item || typeof item.source_id !== "string" || !item.source_id.trim() ||
+            typeof item.company_id !== "string" || !item.company_id.trim() ||
+            !item.company_name || !String(item.company_name).trim()) {
+          return json({ ok: false, error: "Every procurement needs a source_id and associated company." }, 400);
+        }
+        const role = allowedRoles.includes(item.participant_role) ? item.participant_role : "unknown";
+        const procurementId = "base:" + item.source_id.trim().slice(0, 180);
+        if (!companyIds.has(item.company_id)) {
+          statements.push(env.DB.prepare("INSERT OR IGNORE INTO companies (id, nif, name, evidence_type) VALUES (?, ?, ?, 'awardee')")
+            .bind(item.company_id, item.company_nif || null, String(item.company_name).trim().slice(0, 200)));
+        }
+        statements.push(env.DB.prepare(
+          `INSERT INTO procurements (id, source_id, company_id, participant_role, procedure_type, cpv, description, contracting_authority, contract_value, publication_date, procedure_url, source_dataset)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'BASE/IMPIC')
+           ON CONFLICT(source_id) DO UPDATE SET company_id=excluded.company_id, participant_role=excluded.participant_role,
+             procedure_type=excluded.procedure_type, cpv=excluded.cpv, description=excluded.description,
+             contracting_authority=excluded.contracting_authority, contract_value=excluded.contract_value,
+             publication_date=excluded.publication_date, procedure_url=excluded.procedure_url`
+        ).bind(procurementId, item.source_id.trim().slice(0, 180), item.company_id, role,
+          typeof item.procedure_type === "string" ? item.procedure_type.slice(0, 100) : null,
+          typeof item.cpv === "string" ? item.cpv.slice(0, 30) : null,
+          typeof item.description === "string" ? item.description.slice(0, 500) : null,
+          typeof item.contracting_authority === "string" ? item.contracting_authority.slice(0, 200) : null,
+          Number.isFinite(Number(item.contract_value)) ? Number(item.contract_value) : null,
+          typeof item.publication_date === "string" ? item.publication_date.slice(0, 10) : null,
+          typeof item.procedure_url === "string" ? item.procedure_url.slice(0, 500) : null));
+      }
+      const result = statements.length ? await env.DB.batch(statements) : [];
+      return json({ ok: true, companies_received: body.companies.length, procurements_received: body.procurements.length, statements_executed: result.length });
+    }
+
     if (request.method === "POST" && url.pathname === "/internal/companies/batch") {
       if (!authorized(request, env.INGEST_SECRET)) return json({ ok: false, error: "Unauthorized" }, 401);
       const body = await request.json().catch(() => null);
