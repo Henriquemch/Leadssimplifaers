@@ -11,11 +11,52 @@ const env = {
     },
     async batch(statements) { return statements.map(() => ({ success: true })); }
   },
-  ADMIN_TOKEN: "admin-test-secret",
+  ADMIN_PASSWORD: "admin-test-password",
+  SESSION_SECRET: "test-session-secret-with-at-least-32-characters",
+  APP_ORIGIN: "https://app.leadpilot.test",
   INGEST_SECRET: "ingest-test-secret"
 };
 
-test("health is public and reports D1 binding", async () => {
+
+async function adminCookie() {
+  const response = await app.fetch(new Request("https://leadpilot.test/auth/login", {
+    method: "POST",
+    headers: { origin: env.APP_ORIGIN, "content-type": "application/json" },
+    body: JSON.stringify({ password: env.ADMIN_PASSWORD })
+  }), env);
+  assert.equal(response.status, 200);
+  return response.headers.get("set-cookie").split(";")[0];
+}
+\n
+test("login rejects an invalid origin and invalid password", async () => {
+  const badOrigin = await app.fetch(new Request("https://leadpilot.test/auth/login", {
+    method: "POST", headers: { origin: "https://evil.test", "content-type": "application/json" },
+    body: JSON.stringify({ password: env.ADMIN_PASSWORD })
+  }), env);
+  assert.equal(badOrigin.status, 403);
+  const badPassword = await app.fetch(new Request("https://leadpilot.test/auth/login", {
+    method: "POST", headers: { origin: env.APP_ORIGIN, "content-type": "application/json" },
+    body: JSON.stringify({ password: "wrong" })
+  }), env);
+  assert.equal(badPassword.status, 401);
+});
+
+test("session endpoint validates signed cookie", async () => {
+  const cookie = await adminCookie();
+  const response = await app.fetch(new Request("https://leadpilot.test/auth/session", {
+    headers: { cookie }
+  }), env);
+  assert.deepEqual(await response.json(), { ok: true, authenticated: true });
+});
+
+test("mutating API rejects requests without the configured origin", async () => {
+  const response = await app.fetch(new Request("https://leadpilot.test/api/companies/c1/qualification", {
+    method: "PATCH", headers: { cookie: await adminCookie(), origin: "https://evil.test", "content-type": "application/json" },
+    body: JSON.stringify({ status: "approved" })
+  }), envWithCompany({ id: "c1", qualification_status: "pending" }));
+  assert.equal(response.status, 403);
+});
+\ntest("health is public and reports D1 binding", async () => {
   const response = await app.fetch(new Request("https://leadpilot.test/health"), env);
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { ok: true, service: "leadpilot-api", database_configured: true });
@@ -26,9 +67,9 @@ test("company list rejects missing credentials", async () => {
   assert.equal(response.status, 401);
 });
 
-test("company list accepts admin credential", async () => {
+test("company list accepts a signed session cookie", async () => {
   const response = await app.fetch(new Request("https://leadpilot.test/api/companies", {
-    headers: { authorization: "Bearer admin-test-secret" }
+    headers: { cookie: await adminCookie() }
   }), env);
   assert.equal(response.status, 200);
   assert.deepEqual((await response.json()).companies, []);
