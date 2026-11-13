@@ -29,3 +29,11 @@ This is a **parallel migration branch**. It does not change the live Netlify sit
 3. Implement authentication/session flow for the dashboard without exposing secrets in browser code.
 4. Implement incremental, idempotent BASE import and storage-size measurement.
 5. Only then create the Cloudflare D1 database and deploy the Worker.
+
+## Official BASE source findings (13 Nov 2026)
+- The IMPIC dataset is published as annual archives (e.g. `contratos2024.zip`, `contratos2025.zip`, `contratos2026.zip`) and is updated by the source. A third-party public-data audit reports 672,724 records across 2024–2026, which is useful as a scale indicator but is not a substitute for our own full-file audit.
+- The five-year universe must be filtered by the contract's relevant date, not blindly by archive filename. The source itself notes that archive year and publication/contract dates can differ.
+- Do not store complete raw JSON in D1. Keep the original source URL, BASE contract ID, NIF, company name, CPV, procedure type, dates, amount, authority and a small evidence/provenance payload only.
+- Storage decision is pending the automated audit of the actual five-year archives. If one D1 database approaches its 500 MB free limit, evaluate year-based D1 sharding within the account-wide free allowance before importing; do not create databases or incur charges without approval.
+- Official source pages: Portal BASE/IMPIC dataset and the IMPIC explanation of data access methods. See project issue/notes for the audit run.
+
