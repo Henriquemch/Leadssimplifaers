@@ -76,6 +76,11 @@ def parse_entity(item):
         match = re.match(r"^\s*(\d{9})\s*[-–|:]\s*(.+?)\s*$", item)
         if match:
             return match.group(1), match.group(2)
+        pairs = dict(re.findall(r"(NIPCEntidade|nifEntContrato|NIF|NIPC|Entidade|descEntContrato)\s*=\s*([^|]+)", item, re.I))
+        nif = normalize_nif(pick(pairs, "NIPCEntidade", "nifEntContrato", "NIF", "NIPC"))
+        name = pick(pairs, "Entidade", "descEntContrato")
+        if nif and name:
+            return nif, str(name).strip()
     return None, None
 
 
