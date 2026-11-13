@@ -115,7 +115,7 @@ export default {
       const q = (url.searchParams.get("q") || "").trim().slice(0, 100);
       if (q) { filters.push("(d.name LIKE ? OR d.nif LIKE ?)"); values.push("%" + q + "%", "%" + q + "%"); }
       const cpv = (url.searchParams.get("cpv") || "").trim().slice(0, 12);
-      if (cpv) { filters.push("d.top_cpv_json LIKE ?"); values.push("%" + cpv + "%"); }
+      if (cpv) { filters.push("EXISTS (SELECT 1 FROM json_each(d.top_cpv_json) AS cpv_item WHERE json_extract(cpv_item.value, '$.cpv') = ?)"); values.push(cpv); }
       const fromDate = (url.searchParams.get("from_date") || "").trim();
       if (fromDate) { if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(fromDate) || Number.isNaN(Date.parse(fromDate))) return json({ok:false,error:"Invalid from_date."},400); filters.push("d.latest_contract_date >= ?"); values.push(fromDate); }
       const minValue = url.searchParams.get("min_value"), maxValue = url.searchParams.get("max_value");
@@ -149,7 +149,8 @@ export default {
     if (request.method === "GET" && url.pathname === "/api/admin/exclusions") { const result=await env.DB.prepare("SELECT nif,company_name,reason,notes,active,created_at,updated_at FROM lead_exclusions ORDER BY active DESC,updated_at DESC LIMIT 500").all(); return json({ok:true,exclusions:result.results||[]}); }
     if (request.method === "POST" && url.pathname === "/api/admin/exclusions") {
       const body=await request.json().catch(()=>null); const nif=typeof body?.nif==="string"?body.nif.replaceAll(" ","").replaceAll("-",""):""; if(nif.length!==9||![...nif].every(ch=>ch>="0"&&ch<="9"))return json({ok:false,error:"A valid 9-digit NIF is required."},400);
-      await env.DB.prepare("INSERT INTO lead_exclusions(nif,company_name,reason,notes,active) VALUES(?,?,?,?,1) ON CONFLICT(nif) DO UPDATE SET company_name=excluded.company_name,reason=excluded.reason,notes=excluded.notes,active=1,updated_at=CURRENT_TIMESTAMP,reactivated_at=NULL").bind(nif,body.company_name||null,body.reason||"manual",body.notes||null).run(); return json({ok:true,nif},201);
+      const reason=body?.reason||"other"; if(!["current_customer","active_process","do_not_contact","duplicate","other","manual"].includes(reason))return json({ok:false,error:"Invalid exclusion reason."},400);
+      await env.DB.prepare("INSERT INTO lead_exclusions(nif,company_name,reason,notes,active) VALUES(?,?,?,?,1) ON CONFLICT(nif) DO UPDATE SET company_name=excluded.company_name,reason=excluded.reason,notes=excluded.notes,active=1,updated_at=CURRENT_TIMESTAMP,reactivated_at=NULL").bind(nif,body.company_name||null,reason,body.notes||null).run(); return json({ok:true,nif},201);
     }
     const exclusionParts=url.pathname.split("/"); if(request.method==="PATCH"&&exclusionParts.length===5&&exclusionParts[1]==="api"&&exclusionParts[2]==="admin"&&exclusionParts[3]==="exclusions"){
       const body=await request.json().catch(()=>null); if(typeof body?.active!=="boolean")return json({ok:false,error:"active boolean required."},400); await env.DB.prepare("UPDATE lead_exclusions SET active=?,updated_at=CURRENT_TIMESTAMP,reactivated_at=CASE WHEN ?=0 THEN CURRENT_TIMESTAMP ELSE NULL END WHERE nif=?").bind(body.active?1:0,body.active?1:0,exclusionParts[4]).run(); return json({ok:true,nif:exclusionParts[4],active:body.active});
