@@ -10,3 +10,8 @@
   from = "/api/leadpilot"
   to = "/.netlify/functions/leadpilot"
   status = 200
+
+[[redirects]]
+  from = "/api/leadpilot/*"
+  to = "/.netlify/functions/leadpilot/:splat"
+  status = 200
