@@ -54,7 +54,7 @@ def main():
     selected = []
     for resource in resources:
         name = (resource.get("title") or resource.get("url") or "").lower()
-        match = re.search(r"contratos(202[1-6])\\.(zip|json|xlsx)", name)
+        match = re.search(r"contratos(202[1-6])\.(zip|json|xlsx)", name)
         if match and match.group(1) in YEARS and resource.get("url"):
             selected.append((int(match.group(1)), resource))
     selected.sort(key=lambda x: x[0])
