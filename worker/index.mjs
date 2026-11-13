@@ -140,20 +140,31 @@ export default {
     const procurementMatch = url.pathname.match(/^\/api\/companies\/([^/]+)\/procurements$/);
     if (request.method === "GET" && procurementMatch) {
       const companyId = decodeURIComponent(procurementMatch[1]);
-      const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 20), 1), 20);
-      const summary = await env.DB.prepare(
-        "SELECT COUNT(*) AS total_contracts, COALESCE(SUM(contract_value), 0) AS total_value, MAX(publication_date) AS latest_date FROM procurements WHERE company_id = ?"
+      const result = await env.DB.prepare(
+        "SELECT contract_count, awardee_contract_count, competitor_contract_count, awarded_value_total, latest_contract_date, top_cpv_json, top_authorities_json, recent_contracts_json FROM companies WHERE id = ? LIMIT 1"
       ).bind(companyId).all();
-      const rows = await env.DB.prepare(
-        "SELECT source_id, participant_role, procedure_type, cpv, description, contracting_authority, contract_value, publication_date, procedure_url FROM procurements WHERE company_id = ? ORDER BY publication_date DESC LIMIT ?"
-      ).bind(companyId, limit).all();
-      const cpvGroups = await env.DB.prepare(
-        "SELECT cpv, COUNT(*) AS contracts, COALESCE(SUM(contract_value), 0) AS total_value FROM procurements WHERE company_id = ? AND cpv IS NOT NULL AND cpv != '' GROUP BY cpv ORDER BY contracts DESC, total_value DESC LIMIT 5"
-      ).bind(companyId).all();
-      const authorityGroups = await env.DB.prepare(
-        "SELECT contracting_authority, COUNT(*) AS contracts, COALESCE(SUM(contract_value), 0) AS total_value FROM procurements WHERE company_id = ? AND contracting_authority IS NOT NULL AND contracting_authority != '' GROUP BY contracting_authority ORDER BY contracts DESC, total_value DESC LIMIT 5"
-      ).bind(companyId).all();
-      return json({ ok: true, summary: summary.results?.[0] || { total_contracts: 0, total_value: 0, latest_date: null }, procurements: rows.results || [], top_cpv: cpvGroups.results || [], top_authorities: authorityGroups.results || [] });
+      const profile = result.results?.[0];
+      if (!profile) return json({ ok: false, error: "Company not found." }, 404);
+      const parseArray = (value) => { try { const parsed = JSON.parse(value || "[]"); return Array.isArray(parsed) ? parsed : []; } catch { return []; } };
+      const recent = parseArray(profile.recent_contracts_json).slice(0, 3);
+      return json({
+        ok: true,
+        summary: {
+          total_contracts: Number(profile.contract_count || 0),
+          awardee_contracts: Number(profile.awardee_contract_count || 0),
+          competitor_contracts: Number(profile.competitor_contract_count || 0),
+          total_value: Number(profile.awarded_value_total || 0),
+          latest_date: profile.latest_contract_date || null
+        },
+        procurements: recent.map(item => ({
+          source_id: item.source_id, participant_role: item.participant_role,
+          publication_date: item.date, description: item.description,
+          cpv: item.cpv, contracting_authority: item.authority,
+          contract_value: item.value, procedure_url: item.url
+        })),
+        top_cpv: parseArray(profile.top_cpv_json),
+        top_authorities: parseArray(profile.top_authorities_json)
+      });
     }
 
     const qualificationMatch = url.pathname.match(/^\/api\/companies\/([^/]+)\/qualification$/);
@@ -237,65 +248,49 @@ export default {
     if (request.method === "POST" && url.pathname === "/internal/import/batch") {
       if (!authorized(request, env.INGEST_SECRET)) return json({ ok: false, error: "Unauthorized" }, 401);
       const body = await request.json().catch(() => null);
-      if (!body || !Array.isArray(body.companies) || !Array.isArray(body.procurements) ||
-          body.companies.length + body.procurements.length > 100) {
-        return json({ ok: false, error: "Expected companies and procurements arrays with at most 100 combined records." }, 400);
+      if (!body || !Array.isArray(body.companies) || body.companies.length > 50 || body.procurements !== undefined) {
+        return json({ ok: false, error: "Expected up to 50 compact company profiles; individual procurement rows are not accepted." }, 400);
       }
       const statements = [];
-      const companyIds = new Set();
       for (const item of body.companies) {
-        if (!item || typeof item.id !== "string" || !item.id.trim() ||
+        if (!item || typeof item.id !== "string" || !/^nif:\\d{9}$/.test(item.id) ||
+            typeof item.nif !== "string" || !/^\\d{9}$/.test(item.nif) ||
             typeof item.name !== "string" || !item.name.trim()) {
-          return json({ ok: false, error: "Every company needs a stable id and non-empty name." }, 400);
+          return json({ ok: false, error: "Every profile needs a stable NIF id, valid NIF and company name." }, 400);
         }
-        companyIds.add(item.id);
+        const count = (value) => Number.isInteger(value) && value >= 0 ? value : 0;
+        const compactJson = (value, maxBytes) => {
+          if (typeof value !== "string" || value.length > maxBytes) return "[]";
+          try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? value : "[]"; } catch { return "[]"; }
+        };
         const evidence = ["awardee", "competitor_confirmed"].includes(item.evidence_type) ? item.evidence_type : "unverified";
         statements.push(env.DB.prepare(
-          `INSERT INTO companies (id, nif, name, municipality, district, sector, source_url, evidence_type, last_seen_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-           ON CONFLICT(id) DO UPDATE SET nif=excluded.nif, name=excluded.name,
-             municipality=COALESCE(excluded.municipality, companies.municipality),
-             district=COALESCE(excluded.district, companies.district),
-             sector=COALESCE(excluded.sector, companies.sector),
-             source_url=COALESCE(excluded.source_url, companies.source_url),
-             evidence_type=CASE WHEN companies.evidence_type = 'competitor_confirmed' OR excluded.evidence_type = 'competitor_confirmed' THEN 'competitor_confirmed' WHEN companies.evidence_type = 'awardee' OR excluded.evidence_type = 'awardee' THEN 'awardee' ELSE excluded.evidence_type END, last_seen_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP`
-        ).bind(item.id, item.nif || null, item.name.trim().slice(0, 200),
-          typeof item.municipality === "string" ? item.municipality.slice(0, 100) : null,
-          typeof item.district === "string" ? item.district.slice(0, 100) : null,
-          typeof item.sector === "string" ? item.sector.slice(0, 120) : null,
-          typeof item.source_url === "string" ? item.source_url.slice(0, 500) : null, evidence));
-      }
-      const allowedRoles = ["awardee", "competitor_confirmed", "unknown"];
-      for (const item of body.procurements) {
-        if (!item || typeof item.source_id !== "string" || !item.source_id.trim() ||
-            typeof item.company_id !== "string" || !item.company_id.trim() ||
-            !item.company_name || !String(item.company_name).trim()) {
-          return json({ ok: false, error: "Every procurement needs a source_id and associated company." }, 400);
-        }
-        const role = allowedRoles.includes(item.participant_role) ? item.participant_role : "unknown";
-        const procurementId = "base:" + item.source_id.trim().slice(0, 140) + ":" + item.company_id.slice(0, 120);
-        if (!companyIds.has(item.company_id)) {
-          statements.push(env.DB.prepare("INSERT OR IGNORE INTO companies (id, nif, name, evidence_type) VALUES (?, ?, ?, 'awardee')")
-            .bind(item.company_id, item.company_nif || null, String(item.company_name).trim().slice(0, 200)));
-        }
-        statements.push(env.DB.prepare(
-          `INSERT INTO procurements (id, source_id, company_id, participant_role, procedure_type, cpv, description, contracting_authority, contract_value, publication_date, procedure_url, source_dataset)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'BASE/IMPIC')
-           ON CONFLICT(id) DO UPDATE SET company_id=excluded.company_id, participant_role=excluded.participant_role,
-             procedure_type=excluded.procedure_type, cpv=excluded.cpv, description=excluded.description,
-             contracting_authority=excluded.contracting_authority, contract_value=excluded.contract_value,
-             publication_date=excluded.publication_date, procedure_url=excluded.procedure_url`
-        ).bind(procurementId, item.source_id.trim().slice(0, 180), item.company_id, role,
-          typeof item.procedure_type === "string" ? item.procedure_type.slice(0, 100) : null,
-          typeof item.cpv === "string" ? item.cpv.slice(0, 30) : null,
-          typeof item.description === "string" ? item.description.slice(0, 500) : null,
-          typeof item.contracting_authority === "string" ? item.contracting_authority.slice(0, 200) : null,
-          Number.isFinite(Number(item.contract_value)) ? Number(item.contract_value) : null,
-          typeof item.publication_date === "string" ? item.publication_date.slice(0, 10) : null,
-          typeof item.procedure_url === "string" ? item.procedure_url.slice(0, 500) : null));
+          `INSERT INTO companies (
+            id, nif, name, source_url, evidence_type, contract_count, awardee_contract_count,
+            competitor_contract_count, awarded_value_total, latest_contract_date,
+            top_cpv_json, top_authorities_json, recent_contracts_json, last_seen_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          ON CONFLICT(id) DO UPDATE SET
+            name=excluded.name, source_url=COALESCE(excluded.source_url, companies.source_url),
+            evidence_type=CASE WHEN companies.evidence_type = 'awardee' OR excluded.evidence_type = 'awardee' THEN 'awardee' WHEN companies.evidence_type = 'competitor_confirmed' OR excluded.evidence_type = 'competitor_confirmed' THEN 'competitor_confirmed' ELSE excluded.evidence_type END,
+            contract_count=excluded.contract_count, awardee_contract_count=excluded.awardee_contract_count,
+            competitor_contract_count=excluded.competitor_contract_count, awarded_value_total=excluded.awarded_value_total,
+            latest_contract_date=excluded.latest_contract_date, top_cpv_json=excluded.top_cpv_json,
+            top_authorities_json=excluded.top_authorities_json, recent_contracts_json=excluded.recent_contracts_json,
+            last_seen_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP`
+        ).bind(
+          item.id, item.nif, item.name.trim().slice(0, 200),
+          typeof item.source_url === "string" ? item.source_url.slice(0, 500) : null,
+          evidence, count(item.contract_count), count(item.awardee_contract_count),
+          count(item.competitor_contract_count),
+          Number.isFinite(Number(item.awarded_value_total)) && Number(item.awarded_value_total) >= 0 ? Number(item.awarded_value_total) : 0,
+          typeof item.latest_contract_date === "string" ? item.latest_contract_date.slice(0, 10) : null,
+          compactJson(item.top_cpv_json, 4000), compactJson(item.top_authorities_json, 8000),
+          compactJson(item.recent_contracts_json, 12000)
+        ));
       }
       const result = statements.length ? await env.DB.batch(statements) : [];
-      return json({ ok: true, companies_received: body.companies.length, procurements_received: body.procurements.length, statements_executed: result.length });
+      return json({ ok: true, companies_received: body.companies.length, profiles_saved: result.length });
     }
 
     if (request.method === "POST" && url.pathname === "/internal/companies/batch") {
