@@ -120,3 +120,18 @@ test("decision-maker research allowed only for explicitly eligible company", asy
   }), envWithCompany({ id: "c1", qualification_status: "approved", commercial_status: "eligible", customer_status: "no", active_process_status: "no" }));
   assert.equal(response.status, 201);
 });
+
+test("company search accepts bounded filters", async () => {
+  const response = await app.fetch(new Request("https://leadpilot.test/api/companies?q=construcao&qualification_status=approved&commercial_status=eligible", {
+    headers: { authorization: "Bearer admin-test-secret" }
+  }), env);
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).companies, []);
+});
+
+test("company search rejects invalid workflow filters", async () => {
+  const response = await app.fetch(new Request("https://leadpilot.test/api/companies?commercial_status=send_to_crm", {
+    headers: { authorization: "Bearer admin-test-secret" }
+  }), env);
+  assert.equal(response.status, 400);
+});
