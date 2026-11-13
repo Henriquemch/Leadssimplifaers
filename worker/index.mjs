@@ -253,8 +253,8 @@ export default {
       }
       const statements = [];
       for (const item of body.companies) {
-        if (!item || typeof item.id !== "string" || !/^nif:\\d{9}$/.test(item.id) ||
-            typeof item.nif !== "string" || !/^\\d{9}$/.test(item.nif) ||
+        if (!item || typeof item.id !== "string" || !/^nif:\d{9}$/.test(item.id) ||
+            typeof item.nif !== "string" || !/^\d{9}$/.test(item.nif) ||
             typeof item.name !== "string" || !item.name.trim()) {
           return json({ ok: false, error: "Every profile needs a stable NIF id, valid NIF and company name." }, 400);
         }
