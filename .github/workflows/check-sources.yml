@@ -1,0 +1,23 @@
+name: Check public procurement sources
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  refresh-source-manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check official datasets
+        run: node scripts/check-sources.mjs > data/source-manifest.json
+      - name: Commit source manifest when changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/source-manifest.json
+          git diff --cached --quiet || (git commit -m "Refresh official procurement source manifest" && git push)
