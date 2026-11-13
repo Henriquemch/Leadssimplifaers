@@ -137,13 +137,31 @@ test("commercial check is blocked before qualification approval", async () => {
   assert.equal(response.status, 409);
 });
 
-test("eligible status is blocked for current customers", async () => {
+test("current customers are automatically marked not_contact", async () => {
+  let savedStatus = null;
+  const localEnv = {
+    ...env,
+    DB: {
+      prepare(sql) {
+        return { bind(...values) { return { sql, values, async all() {
+          if (sql.includes("SELECT id, qualification_status")) return { results: [{ id: "c1", qualification_status: "approved" }] };
+          return { results: [] };
+        } }; } };
+      },
+      async batch(statements) {
+        savedStatus = statements[0].values[4];
+        return statements.map(() => ({ success: true }));
+      }
+    }
+  };
   const response = await app.fetch(new Request("https://leadpilot.test/api/companies/c1/commercial-check", {
     method: "PATCH",
     headers: { cookie: await adminCookie(), origin: env.APP_ORIGIN, "content-type": "application/json" },
     body: JSON.stringify({ customer_status: "yes", contacted_status: "no", active_process_status: "no", commercial_status: "eligible" })
-  }), envWithCompany({ id: "c1", qualification_status: "approved" }));
-  assert.equal(response.status, 409);
+  }), localEnv);
+  assert.equal(response.status, 200);
+  assert.equal(savedStatus, "not_contact");
+  assert.equal((await response.json()).commercial_status, "not_contact");
 });
 
 test("decision-maker research is blocked unless company is eligible", async () => {
