@@ -227,15 +227,21 @@ test("company evidence endpoint reads compact profile without procurement table"
     DB: {
       prepare(sql) {
         queriedSql = sql;
-        return { bind(...values) { return { async all() {
-          return { results: [{
-            contract_count: 3, awardee_contract_count: 2, competitor_contract_count: 1,
-            awarded_value_total: 12000, latest_contract_date: "2026-10-01",
-            top_cpv_json: '[{"cpv":"45000000-7","contracts":2}]',
-            top_authorities_json: '[{"contracting_authority":"Instituto Público","contracts":2}]',
-            recent_contracts_json: '[{"source_id":"base-1","participant_role":"awardee","date":"2026-10-01","description":"Serviços","value":4000}]'
-          }] };
-        } }; }
+        return {
+          bind(...values) {
+            return {
+              async all() {
+                return { results: [{
+                  contract_count: 3, awardee_contract_count: 2, competitor_contract_count: 1,
+                  awarded_value_total: 12000, latest_contract_date: "2026-10-01",
+                  top_cpv_json: '[{"cpv":"45000000-7","contracts":2}]',
+                  top_authorities_json: '[{"contracting_authority":"Instituto Público","contracts":2}]',
+                  recent_contracts_json: '[{"source_id":"base-1","participant_role":"awardee","date":"2026-10-01","description":"Serviços","value":4000}]'
+                }] };
+              }
+            };
+          }
+        };
       }
     }
   };
