@@ -182,6 +182,30 @@ test("decision-maker research allowed only for explicitly eligible company", asy
   assert.equal(response.status, 201);
 });
 
+test("procurement evidence endpoint returns compact summaries only", async () => {
+  let queriedSql = [];
+  const localEnv = {
+    ...env,
+    DB: {
+      prepare(sql) {
+        queriedSql.push(sql);
+        return { bind(...values) { return { async all() {
+          if (sql.includes("COUNT(*) AS total_contracts")) return { results: [{ total_contracts: 3, total_value: 12000, latest_date: "2026-10-01" }] };
+          return { results: [{ source_id: "base-1", description: "Serviços", contract_value: 4000 }] };
+        } }; } };
+      }
+    }
+  };
+  const response = await app.fetch(new Request("https://leadpilot.test/api/companies/c1/procurements?limit=500", {
+    headers: { cookie: await adminCookie() }
+  }), localEnv);
+  assert.equal(response.status, 200);
+  const data = await response.json();
+  assert.equal(data.summary.total_contracts, 3);
+  assert.equal(data.procurements.length, 1);
+  assert.ok(queriedSql.every(sql => !sql.includes("source_record")));
+});
+
 test("company search accepts bounded filters", async () => {
   const response = await app.fetch(new Request("https://leadpilot.test/api/companies?q=construcao&qualification_status=approved&commercial_status=eligible", {
     headers: { cookie: await adminCookie() }
