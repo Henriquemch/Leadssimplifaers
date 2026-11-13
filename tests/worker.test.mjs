@@ -129,6 +129,34 @@ test("BASE discovery requires a filter and only returns bounded results", async 
   assert.equal((await filtered.json()).limit, 30);
 });
 
+test("CPV discovery uses exact JSON code matching, not substring matching", async () => {
+  let capturedSql = "", capturedValues = [];
+  const localEnv = {
+    ...env,
+    DB: {
+      prepare(sql) {
+        return { bind(...values) { capturedSql = sql; capturedValues = values; return { async all() { return { results: [] }; } }; } };
+      }
+    }
+  };
+  const response = await app.fetch(new Request("https://leadpilot.test/api/discovery/search?cpv=45000000-7", {
+    headers: { cookie: await adminCookie() }
+  }), localEnv);
+  assert.equal(response.status, 200);
+  assert.ok(capturedSql.includes("json_each(d.top_cpv_json)"));
+  assert.ok(!capturedSql.includes("top_cpv_json LIKE"));
+  assert.ok(capturedValues.includes("45000000-7"));
+});
+
+test("administrative exclusions reject unknown reasons", async () => {
+  const response = await app.fetch(new Request("https://leadpilot.test/api/admin/exclusions", {
+    method: "POST",
+    headers: { cookie: await adminCookie(), origin: env.APP_ORIGIN, "content-type": "application/json" },
+    body: JSON.stringify({ nif: "501000000", reason: "invented_reason" })
+  }), env);
+  assert.equal(response.status, 400);
+});
+
 test("adding a BASE profile creates the lead and history in one D1 batch", async () => {
   let batchSize = 0;
   const localEnv = {
