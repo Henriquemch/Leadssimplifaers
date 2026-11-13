@@ -182,6 +182,15 @@ export default {
       return json({ ok: true, company_id: companyId, commercial_status: nextCommercialStatus });
     }
 
+    const peopleMatch = url.pathname.match(/^\/api\/companies\/([^/]+)\/decision-makers$/);
+    if (request.method === "GET" && peopleMatch) {
+      const companyId = decodeURIComponent(peopleMatch[1]);
+      const result = await env.DB.prepare(
+        "SELECT id, full_name, job_title, professional_profile_url, source_url, provider, created_at FROM decision_makers WHERE company_id = ? ORDER BY created_at DESC LIMIT 50"
+      ).bind(companyId).all();
+      return json({ ok: true, decision_makers: result.results || [] });
+    }
+
     if (request.method === "GET" && url.pathname === "/api/companies/events") {
       const companyId = url.searchParams.get("company_id");
       if (!companyId) return json({ ok: false, error: "company_id is required." }, 400);
