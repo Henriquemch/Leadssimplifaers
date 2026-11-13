@@ -16,6 +16,10 @@ jobs:
           python-version: "3.12"
       - name: Refresh official source manifest
         run: node scripts/check-sources.mjs > data/source-manifest.json
+      - name: Install parser dependency
+        run: python -m pip install --disable-pip-version-check openpyxl
+      - name: Validate Python syntax
+        run: python -m py_compile scripts/profile-contract-data.py
       - name: Inspect annual contract files
         run: python scripts/profile-contract-data.py
       - name: Save schema audit
