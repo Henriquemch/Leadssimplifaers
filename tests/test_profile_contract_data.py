@@ -43,6 +43,16 @@ class ParserTests(unittest.TestCase):
         rows = list(rows_from_bytes(archive_buffer.getvalue(), "test.zip"))
         self.assertEqual(rows[0]["NIF"], "501000000")
 
+    def test_excel_workbook_with_zip_extension(self):
+        workbook_buffer = io.BytesIO()
+        workbook = Workbook()
+        sheet = workbook.active
+        sheet.append(["NIF", "Nome"])
+        sheet.append(["503000000", "Empresa BASE"])
+        workbook.save(workbook_buffer)
+        rows = list(rows_from_bytes(workbook_buffer.getvalue(), "contratos2026.zip"))
+        self.assertEqual(rows[0]["NIF"], "503000000")
+
     def test_flatten_nested_fields(self):
         fields = dict(flatten({"adjudicatario": {"nif": "501000000"}}))
         self.assertIn("adjudicatario.nif", fields)
