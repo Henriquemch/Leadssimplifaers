@@ -54,7 +54,7 @@ def rows_from_bytes(data,name):
         elif csvs:
             f=io.TextIOWrapper(io.BytesIO(z.read(csvs[0])),encoding="utf-8-sig",errors="replace")
             yield from csv.DictReader(f)
-        else: raise RuntimeError("ZIP sem JSON, XLSX ou CSV")
+        else: raise RuntimeError("ZIP sem JSON, XLSX ou CSV; membros encontrados: " + ", ".join(members[:40]))
     elif data[:2]==b"\xd0\xcf":
         wb=load_workbook(io.BytesIO(data),read_only=True,data_only=True)
         ws=wb[wb.sheetnames[0]]; it=ws.iter_rows(values_only=True)
