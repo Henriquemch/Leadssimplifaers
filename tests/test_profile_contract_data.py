@@ -1,4 +1,4 @@
-import io, json, unittest, zipfile, importlib.util
+import io, json, unittest, zipfile, importlib.util\nfrom openpyxl import Workbook
 from pathlib import Path
 spec=importlib.util.spec_from_file_location("profile_contract_data", Path(__file__).parents[1] / "scripts" / "profile-contract-data.py")
 module=importlib.util.module_from_spec(spec)
@@ -23,7 +23,7 @@ class ParserTests(unittest.TestCase):
         rows=list(rows_from_bytes(buff.getvalue(),"test.zip"))
         self.assertEqual(rows[0]["id"],"abc")
 
-    def test_flatten_nested_fields(self):
+    def test_zip_xlsx(self):\n        buff=io.BytesIO()\n        wb=Workbook(); ws=wb.active; ws.append(["NIF","Nome"]); ws.append(["501000000","Empresa Exemplo"]); wb.save(buff)\n        archive=io.BytesIO()\n        with zipfile.ZipFile(archive,"w") as z: z.writestr("contracts.xlsx",buff.getvalue())\n        rows=list(rows_from_bytes(archive.getvalue(),"test.zip"))\n        self.assertEqual(rows[0]["NIF"],"501000000")\n\n    def test_flatten_nested_fields(self):
         fields=dict(flatten({"adjudicatario":{"nif":"501000000"}}))
         self.assertIn("adjudicatario.nif",fields)
         self.assertEqual(fields["adjudicatario.nif"],"501000000")
