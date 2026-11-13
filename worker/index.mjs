@@ -252,7 +252,7 @@ export default {
              district=COALESCE(excluded.district, companies.district),
              sector=COALESCE(excluded.sector, companies.sector),
              source_url=COALESCE(excluded.source_url, companies.source_url),
-             evidence_type=excluded.evidence_type, last_seen_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP`
+             evidence_type=CASE WHEN companies.evidence_type = 'competitor_confirmed' OR excluded.evidence_type = 'competitor_confirmed' THEN 'competitor_confirmed' WHEN companies.evidence_type = 'awardee' OR excluded.evidence_type = 'awardee' THEN 'awardee' ELSE excluded.evidence_type END, last_seen_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP`
         ).bind(item.id, item.nif || null, item.name.trim().slice(0, 200),
           typeof item.municipality === "string" ? item.municipality.slice(0, 100) : null,
           typeof item.district === "string" ? item.district.slice(0, 100) : null,
@@ -267,7 +267,7 @@ export default {
           return json({ ok: false, error: "Every procurement needs a source_id and associated company." }, 400);
         }
         const role = allowedRoles.includes(item.participant_role) ? item.participant_role : "unknown";
-        const procurementId = "base:" + item.source_id.trim().slice(0, 180);
+        const procurementId = "base:" + item.source_id.trim().slice(0, 140) + ":" + item.company_id.slice(0, 120);
         if (!companyIds.has(item.company_id)) {
           statements.push(env.DB.prepare("INSERT OR IGNORE INTO companies (id, nif, name, evidence_type) VALUES (?, ?, ?, 'awardee')")
             .bind(item.company_id, item.company_nif || null, String(item.company_name).trim().slice(0, 200)));
@@ -275,7 +275,7 @@ export default {
         statements.push(env.DB.prepare(
           `INSERT INTO procurements (id, source_id, company_id, participant_role, procedure_type, cpv, description, contracting_authority, contract_value, publication_date, procedure_url, source_dataset)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'BASE/IMPIC')
-           ON CONFLICT(source_id) DO UPDATE SET company_id=excluded.company_id, participant_role=excluded.participant_role,
+           ON CONFLICT(id) DO UPDATE SET company_id=excluded.company_id, participant_role=excluded.participant_role,
              procedure_type=excluded.procedure_type, cpv=excluded.cpv, description=excluded.description,
              contracting_authority=excluded.contracting_authority, contract_value=excluded.contract_value,
              publication_date=excluded.publication_date, procedure_url=excluded.procedure_url`
