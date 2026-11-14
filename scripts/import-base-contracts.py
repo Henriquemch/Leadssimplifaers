@@ -291,10 +291,14 @@ def main():
         raise SystemExit("Não foram encontrados arquivos anuais contratos2021–2026 no manifesto.")
     resources.sort(key=lambda item: item[0])
 
+    max_records = int(os.getenv("LEADPILOT_MAX_RECORDS", "0") or "0")
+    if max_records < 0:
+        raise SystemExit("LEADPILOT_MAX_RECORDS não pode ser negativo.")
     totals = {"files": 0, "rows_seen": 0, "rows_in_window": 0, "companies": 0, "company_participations": 0, "profile_batches": 0, "contract_batches": 0, "contract_records": 0}
     profiles = OrderedDict()
     contract_batch = []
     contract_batch_size = 500
+    stop_at_limit = False
     for year, resource in resources:
         request = urllib.request.Request(resource["url"], headers={"User-Agent": "LeadPilot-BASE-import/1.0"})
         with urllib.request.urlopen(request, timeout=180) as response:
@@ -330,7 +334,14 @@ def main():
                         post_contract_batch(worker_url, secret, contract_batch)
                         totals["contract_batches"] += 1
                         contract_batch = []
+                if max_records and totals["contract_records"] >= max_records:
+                    stop_at_limit = True
+                    break
+            if stop_at_limit:
+                break
         del data
+        if stop_at_limit:
+            break
 
     if contract_batch:
         post_contract_batch(worker_url, secret, contract_batch)
