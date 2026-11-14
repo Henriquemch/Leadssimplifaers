@@ -110,7 +110,7 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/api/discovery/search") {
       const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 30), 1), 30);
-      const filters = ["NOT EXISTS (SELECT 1 FROM companies l WHERE l.nif = d.nif)", "NOT EXISTS (SELECT 1 FROM lead_exclusions x WHERE x.nif = d.nif AND x.active = 1)"];
+      const filters = ["NOT EXISTS (SELECT 1 FROM lead_registry lr WHERE lr.nif = d.nif)", "NOT EXISTS (SELECT 1 FROM companies l WHERE l.nif = d.nif)", "NOT EXISTS (SELECT 1 FROM lead_exclusions x WHERE x.nif = d.nif AND x.active = 1)"];
       const values = [];
       const q = (url.searchParams.get("q") || "").trim().slice(0, 100);
       if (q) { filters.push("(d.name LIKE ? OR d.nif LIKE ?)"); values.push("%" + q + "%", "%" + q + "%"); }
@@ -139,6 +139,7 @@ export default {
       const companyId="nif:"+nif;
       try {
         await env.DB.batch([
+          env.DB.prepare("INSERT INTO lead_registry (nif,name) VALUES (?,?)").bind(nif,p.name),
           env.DB.prepare("INSERT INTO companies (id,nif,name,source_url,evidence_type,contract_count,awardee_contract_count,competitor_contract_count,awarded_value_total,latest_contract_date,top_cpv_json,top_authorities_json,recent_contracts_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(companyId,nif,p.name,p.source_url||null,p.evidence_type,p.contract_count,p.awardee_contract_count,p.competitor_contract_count,p.awarded_value_total,p.latest_contract_date,p.top_cpv_json,p.top_authorities_json,p.recent_contracts_json),
           env.DB.prepare("INSERT INTO company_events (id,company_id,event_type,summary) VALUES (?,?,'qualification_changed','Lead adicionado a partir da pesquisa BASE.')").bind(id(),companyId)
         ]);
@@ -157,6 +158,16 @@ export default {
     const exclusionParts=url.pathname.split("/"); if(request.method==="PATCH"&&exclusionParts.length===5&&exclusionParts[1]==="api"&&exclusionParts[2]==="admin"&&exclusionParts[3]==="exclusions"){
       const body=await request.json().catch(()=>null); if(typeof body?.active!=="boolean")return json({ok:false,error:"active boolean required."},400); await env.DB.prepare("UPDATE lead_exclusions SET active=?,updated_at=CURRENT_TIMESTAMP,reactivated_at=CASE WHEN ?=0 THEN CURRENT_TIMESTAMP ELSE NULL END WHERE nif=?").bind(body.active?1:0,body.active?1:0,exclusionParts[4]).run(); return json({ok:true,nif:exclusionParts[4],active:body.active});
     }
+    const leadDeleteMatch = url.pathname.match(/^\/api\/leads\/([0-9]{9})$/);
+    if (request.method === "DELETE" && leadDeleteMatch) {
+      const nif = leadDeleteMatch[1];
+      const existing = await env.DB.prepare("SELECT id FROM companies WHERE nif = ? LIMIT 1").bind(nif).all();
+      const company = existing.results?.[0];
+      if (!company) return json({ ok: false, error: "Lead não encontrada no pipeline." }, 404);
+      await env.DB.prepare("DELETE FROM companies WHERE id = ?").bind(company.id).run();
+      return json({ ok: true, nif, registry_preserved: true });
+    }
+
     if (request.method === "GET" && url.pathname === "/api/companies") {
       const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 50), 1), 100);
       const filters = [];
