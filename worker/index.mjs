@@ -299,7 +299,7 @@ export default {
       const statements = [];
       for (const item of body.contracts) {
         if (!item || typeof item.source_id !== "string" || !item.source_id.trim() ||
-            typeof item.nif !== "string" || !/^\\d{9}$/.test(item.nif) ||
+            typeof item.nif !== "string" || !/^\d{9}$/.test(item.nif) ||
             typeof item.company_name !== "string" || !item.company_name.trim() ||
             !["awardee", "competitor_confirmed"].includes(item.participant_role)) {
           return json({ ok: false, error: "Every contract needs source_id, valid NIF, company_name and participant_role." }, 400);
