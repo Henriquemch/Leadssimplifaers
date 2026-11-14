@@ -6,8 +6,8 @@ This is a **parallel staging migration branch**. It does not change the live Net
 
 - Cloudflare D1 database `leadpilot` has been created manually by the account owner.
 - D1 database ID: `fcea37de-694c-4bc2-ad72-4b70c8e21740`.
-- The database is currently empty: migrations have not yet been applied and no BASE records have been imported.
-- No Worker has been deployed and no Cloudflare secrets have been configured.
+- Seven D1 migrations have been applied successfully. The API health endpoint confirms that the Worker can see its D1 binding. No BASE records have been imported.
+- The staging Worker `leadpilot-api-dev` has been deployed successfully at `https://leadpilot-api-dev.henriquemvm98.workers.dev`. Its `/health` endpoint returns `ok: true` and `database_configured: true`. No application authentication secrets have been configured yet.
 - `wrangler.toml` targets a staging Worker named `leadpilot-api-dev`, with `APP_ENV = "staging"`, and binds the existing D1 database as `DB`.
 - The production Netlify site and `main` branch remain untouched.
 
@@ -49,7 +49,10 @@ This is a **parallel staging migration branch**. It does not change the live Net
 - Company participations aggregated: 662,478.
 - Estimated import batches: 721.
 - Compact JSON transfer payload: 50,166,314 bytes (about 50.2 MB); this is **not** a measurement of final D1 storage or billing.
-- Latest parser/Worker/frontend CI run passed on commit `f436c029da6eebe44a093dd430ca1b001d51f627`. A new run is triggered by subsequent branch commits.
+- Latest parser/Worker/frontend CI run passed on commit `f436c029da6eebe44a093dd430ca1b001d51f627`.
+- Staging deployment workflow completed successfully; seven D1 migrations were applied and the Worker was deployed.
+- Live `/health` test returned `{\"ok\":true,\"service\":\"leadpilot-api\",\"database_configured\":true}`.
+- Live unauthenticated `/api/discovery/search` test returned HTTP 401 `Unauthorized`, confirming API protection.
 
 ## Secrets and environment
 
@@ -65,10 +68,9 @@ The current authentication setup uses server-side session cookies. Keep the Netl
 
 ## Safe next steps
 
-1. Review and validate the Worker deployment and authentication configuration.
-2. Deploy only the staging Worker `leadpilot-api-dev`; do not deploy to production.
-3. Apply D1 migrations to the existing `leadpilot` database.
-4. Configure preview-only Netlify variables and test login, discovery, manual lead admission and exclusions with controlled test data.
-5. Measure actual D1 storage using a small, explicitly approved import before considering the full 12-month import.
+1. Configure `ADMIN_PASSWORD`, `SESSION_SECRET`, `INGEST_SECRET`, and `APP_ORIGIN` on the staging Worker.
+2. Configure preview-only Netlify `LEADPILOT_WORKER_URL` and test login through the same-origin proxy.
+3. Test discovery, manual lead admission and exclusions with controlled test data.
+4. Measure actual D1 storage using a small, explicitly approved import before considering the full 12-month import.
 
 No production deployment, production environment changes, paid plan, billing upgrade, or real BASE import is authorized by this document. Do not merge this branch into `main` without the user's explicit approval.
