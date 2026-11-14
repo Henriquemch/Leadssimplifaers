@@ -117,7 +117,7 @@ export default {
       const cpv = (url.searchParams.get("cpv") || "").trim().slice(0, 12);
       if (cpv) { filters.push("EXISTS (SELECT 1 FROM json_each(d.top_cpv_json) AS cpv_item WHERE json_extract(cpv_item.value, '$.cpv') = ?)"); values.push(cpv); }
       const fromDate = (url.searchParams.get("from_date") || "").trim();
-      if (fromDate) { if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(fromDate) || Number.isNaN(Date.parse(fromDate))) return json({ok:false,error:"Invalid from_date."},400); filters.push("d.latest_contract_date >= ?"); values.push(fromDate); }
+      if (fromDate) { if (!/^\d{4}-\d{2}-\d{2}$/.test(fromDate) || Number.isNaN(Date.parse(fromDate))) return json({ok:false,error:"Invalid from_date."},400); filters.push("d.latest_contract_date >= ?"); values.push(fromDate); }
       const minValue = url.searchParams.get("min_value"), maxValue = url.searchParams.get("max_value");
       let minNumber = null, maxNumber = null;
       if (minValue !== null && minValue !== "") { minNumber=Number(minValue); if(!Number.isFinite(minNumber)||minNumber<0)return json({ok:false,error:"Invalid min_value."},400); filters.push("d.awarded_value_total >= ?"); values.push(minNumber); }
