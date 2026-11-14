@@ -22,10 +22,18 @@ export default async (request) => {
 
   const incoming = new URL(request.url);
   const functionPrefix = "/.netlify/functions/leadpilot";
-  const suffix = incoming.pathname.startsWith(functionPrefix)
-    ? incoming.pathname.slice(functionPrefix.length)
-    : "";
-  const target = new URL(base.origin + (base.pathname.replace(/\/$/, "") + suffix || "/"));
+  const apiPrefix = "/api/leadpilot";
+  let suffix = "";
+  if (incoming.pathname.startsWith(functionPrefix)) {
+    suffix = incoming.pathname.slice(functionPrefix.length);
+  } else if (incoming.pathname === apiPrefix) {
+    suffix = "";
+  } else if (incoming.pathname.startsWith(apiPrefix + "/")) {
+    suffix = incoming.pathname.slice(apiPrefix.length);
+  }
+  // LEADPILOT_WORKER_URL is an origin, not an API path. Use the
+  // incoming suffix so both Netlify's rewritten and original paths work.
+  const target = new URL(suffix || "/", base.origin);
   target.search = incoming.search;
 
   const headers = new Headers(request.headers);
