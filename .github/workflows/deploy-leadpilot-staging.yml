@@ -54,3 +54,20 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: wrangler deploy --config wrangler.toml
+
+      - name: Smoke test staging API
+        run: |
+          response="$(curl --fail --silent --show-error https://leadpilot-api-dev.henriquemvm98.workers.dev/health)"
+          echo "$response"
+          echo "$response" | node -e '
+            let data = "";
+            process.stdin.on("data", chunk => data += chunk);
+            process.stdin.on("end", () => {
+              const result = JSON.parse(data);
+              if (result.ok !== true || result.database_configured !== true) {
+                console.error("Health check failed: D1 binding is not confirmed.");
+                process.exit(1);
+              }
+              console.log("Health check passed: Worker responds and D1 binding is present.");
+            });
+          '
