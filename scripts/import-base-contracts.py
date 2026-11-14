@@ -174,7 +174,7 @@ def post_batch(worker_url, secret, companies):
     payload = json.dumps({"companies": companies}, ensure_ascii=False, separators=(",", ":")).encode()
     request = urllib.request.Request(
         worker_url.rstrip("/") + "/internal/import/batch", data=payload, method="POST",
-        headers={"authorization": "Bearer " + secret, "content-type": "application/json"},
+        headers={"authorization": "Bearer " + secret, "content-type": "application/json", "user-agent": "LeadPilot-BASE-Importer/1.0"},
     )
     try:
         with urllib.request.urlopen(request, timeout=60) as response:
@@ -190,7 +190,7 @@ def post_contract_batch(worker_url, secret, contracts):
     payload = json.dumps({"contracts": contracts}, ensure_ascii=False, separators=(",", ":")).encode()
     request = urllib.request.Request(
         worker_url.rstrip("/") + "/internal/import/contracts/batch", data=payload, method="POST",
-        headers={"authorization": "Bearer " + secret, "content-type": "application/json"},
+        headers={"authorization": "Bearer " + secret, "content-type": "application/json", "user-agent": "LeadPilot-BASE-Importer/1.0"},
     )
     try:
         with urllib.request.urlopen(request, timeout=90) as response:
