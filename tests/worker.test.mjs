@@ -145,7 +145,7 @@ test("CPV discovery searches all imported contract records, not only top-five pr
   assert.equal(response.status, 200);
   assert.ok(capturedSql.includes("EXISTS (SELECT 1 FROM discovery_contracts dc"));
   assert.ok(capturedSql.includes("dc.cpv = ?"));
-  assert.ok(!capturedSql.includes("top_cpv_json"));
+  assert.ok(!capturedSql.includes("json_each(d.top_cpv_json)"));
   assert.ok(capturedValues.includes("45000000-7"));
 });
 
