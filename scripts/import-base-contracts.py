@@ -275,7 +275,7 @@ def finalize_profile(profile):
     return result
 
 
-def main():
+def main():  # bounded staging import trial
     manifest_path = ROOT / "data" / "source-manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     source = next((s for s in manifest.get("sources", []) if s.get("key") == "contracts"), None)
