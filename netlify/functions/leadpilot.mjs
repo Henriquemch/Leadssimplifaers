@@ -3,6 +3,8 @@ const json = (data, status = 200) => new Response(JSON.stringify(data), {
   headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
 });
 
+export const config = { path: ["/api/leadpilot", "/api/leadpilot/*"] };
+
 export default async (request) => {
   const workerBase = process.env.LEADPILOT_WORKER_URL;
   if (!workerBase) {
