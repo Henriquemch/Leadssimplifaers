@@ -116,12 +116,13 @@ test("compact BASE import stores one company profile and rejects contract-row pa
 });
 
 
-test("BASE discovery requires a filter and only returns bounded results", async () => {
+test("BASE discovery allows independent optional filters and bounds results", async () => {
   const cookie = await adminCookie();
   const broad = await app.fetch(new Request("https://leadpilot.test/api/discovery/search", {
     headers: { cookie }
   }), env);
-  assert.equal(broad.status, 400);
+  assert.equal(broad.status, 200);
+  assert.equal((await broad.json()).limit, 30);
   const filtered = await app.fetch(new Request("https://leadpilot.test/api/discovery/search?q=empresa&limit=500", {
     headers: { cookie }
   }), env);
@@ -144,9 +145,9 @@ test("CPV discovery searches all imported contract records, not only top-five pr
   }), localEnv);
   assert.equal(response.status, 200);
   assert.ok(capturedSql.includes("EXISTS (SELECT 1 FROM discovery_contracts dc"));
-  assert.ok(capturedSql.includes("dc.cpv = ?"));
+  assert.ok(capturedSql.includes("dc.cpv LIKE ?"));
   assert.ok(!capturedSql.includes("json_each(d.top_cpv_json)"));
-  assert.ok(capturedValues.includes("45000000-7"));
+  assert.ok(capturedValues.includes("45000000-7%"));
 });
 
 test("administrative exclusions reject unknown reasons", async () => {
