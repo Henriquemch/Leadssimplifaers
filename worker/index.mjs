@@ -328,7 +328,7 @@ export default {
       return json({ ok: true, decision_maker_id: personId }, 201);
     }
 
-    const personStatusMatch = url.pathname.match(/^\\/api\\/decision-makers\\/([a-f0-9-]+)\\/review$/);
+    const personStatusMatch = url.pathname.match(/^\/api\/decision-makers\/([a-f0-9-]+)\/review$/);
     if (request.method === "PATCH" && personStatusMatch) {
       const body = await request.json().catch(() => null);
       if (!["pending", "selected", "rejected"].includes(body?.review_status)) {
