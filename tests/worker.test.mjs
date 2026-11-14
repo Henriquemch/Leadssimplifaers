@@ -129,7 +129,7 @@ test("BASE discovery requires a filter and only returns bounded results", async 
   assert.equal((await filtered.json()).limit, 30);
 });
 
-test("CPV discovery uses exact JSON code matching, not substring matching", async () => {
+test("CPV discovery searches all imported contract records, not only top-five profile CPVs", async () => {
   let capturedSql = "", capturedValues = [];
   const localEnv = {
     ...env,
@@ -143,8 +143,9 @@ test("CPV discovery uses exact JSON code matching, not substring matching", asyn
     headers: { cookie: await adminCookie() }
   }), localEnv);
   assert.equal(response.status, 200);
-  assert.ok(capturedSql.includes("json_each(d.top_cpv_json)"));
-  assert.ok(!capturedSql.includes("top_cpv_json LIKE"));
+  assert.ok(capturedSql.includes("EXISTS (SELECT 1 FROM discovery_contracts dc"));
+  assert.ok(capturedSql.includes("dc.cpv = ?"));
+  assert.ok(!capturedSql.includes("top_cpv_json"));
   assert.ok(capturedValues.includes("45000000-7"));
 });
 
@@ -299,23 +300,29 @@ test("decision-maker research allowed only for explicitly eligible company", asy
   assert.equal(response.status, 201);
 });
 
-test("company evidence endpoint reads compact profile without procurement table", async () => {
-  let queriedSql = "";
+test("company evidence endpoint reads full discovery contract history", async () => {
+  const queriedSql = [];
+  let queryCount = 0;
   const localEnv = {
     ...env,
     DB: {
       prepare(sql) {
-        queriedSql = sql;
+        queriedSql.push(sql);
+        const current = queryCount++;
         return {
           bind(...values) {
             return {
               async all() {
-                return { results: [{
+                if (current === 0) return { results: [{
                   contract_count: 3, awardee_contract_count: 2, competitor_contract_count: 1,
                   awarded_value_total: 12000, latest_contract_date: "2026-10-01",
                   top_cpv_json: '[{"cpv":"45000000-7","contracts":2}]',
-                  top_authorities_json: '[{"contracting_authority":"Instituto Público","contracts":2}]',
-                  recent_contracts_json: '[{"source_id":"base-1","participant_role":"awardee","date":"2026-10-01","description":"Serviços","value":4000}]'
+                  top_authorities_json: '[{"contracting_authority":"Instituto Público","contracts":2}]'
+                }] };
+                return { results: [{
+                  source_id: "base-1", participant_role: "awardee", publication_date: "2026-10-01",
+                  description: "Serviços", cpv: "45000000-7", contracting_authority: "Instituto Público",
+                  contract_value: 4000, procedure_url: "https://www.base.gov.pt/"
                 }] };
               }
             };
@@ -333,10 +340,10 @@ test("company evidence endpoint reads compact profile without procurement table"
   assert.equal(data.summary.awardee_contracts, 2);
   assert.equal(data.summary.total_value, 12000);
   assert.equal(data.procurements.length, 1);
+  assert.equal(data.procurements[0].cpv, "45000000-7");
   assert.equal(data.top_cpv[0].cpv, "45000000-7");
   assert.equal(data.top_authorities[0].contracting_authority, "Instituto Público");
-  assert.ok(queriedSql.includes("recent_contracts_json"));
-  assert.ok(!queriedSql.includes("FROM procurements"));
+  assert.ok(queriedSql[1].includes("FROM discovery_contracts"));
 });
 
 test("company search accepts bounded filters", async () => {
