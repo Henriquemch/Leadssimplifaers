@@ -115,7 +115,7 @@ export default {
       const q = (url.searchParams.get("q") || "").trim().slice(0, 100);
       if (q) { filters.push("(d.name LIKE ? OR d.nif LIKE ?)"); values.push("%" + q + "%", "%" + q + "%"); }
       const cpv = (url.searchParams.get("cpv") || "").trim().slice(0, 12);
-      if (cpv) { filters.push("EXISTS (SELECT 1 FROM json_each(d.top_cpv_json) AS cpv_item WHERE json_extract(cpv_item.value, '$.cpv') = ?)"); values.push(cpv); }
+      if (cpv) { filters.push("EXISTS (SELECT 1 FROM discovery_contracts dc WHERE dc.nif = d.nif AND dc.cpv = ?)"); values.push(cpv); }
       const fromDate = (url.searchParams.get("from_date") || "").trim();
       if (fromDate) { if (!/^\d{4}-\d{2}-\d{2}$/.test(fromDate) || Number.isNaN(Date.parse(fromDate))) return json({ok:false,error:"Invalid from_date."},400); filters.push("d.latest_contract_date >= ?"); values.push(fromDate); }
       const minValue = url.searchParams.get("min_value"), maxValue = url.searchParams.get("max_value");
@@ -188,12 +188,15 @@ export default {
     if (request.method === "GET" && procurementMatch) {
       const companyId = decodeURIComponent(procurementMatch[1]);
       const result = await env.DB.prepare(
-        "SELECT contract_count, awardee_contract_count, competitor_contract_count, awarded_value_total, latest_contract_date, top_cpv_json, top_authorities_json, recent_contracts_json FROM companies WHERE id = ? LIMIT 1"
+        "SELECT contract_count, awardee_contract_count, competitor_contract_count, awarded_value_total, latest_contract_date, top_cpv_json, top_authorities_json FROM companies WHERE id = ? LIMIT 1"
       ).bind(companyId).all();
       const profile = result.results?.[0];
       if (!profile) return json({ ok: false, error: "Company not found." }, 404);
+      const nif = companyId.startsWith("nif:") ? companyId.slice(4) : "";
+      const history = await env.DB.prepare(
+        "SELECT source_id, participant_role, publication_date, description, cpv, contracting_authority, contract_value, procedure_url FROM discovery_contracts WHERE nif = ? ORDER BY publication_date DESC LIMIT 500"
+      ).bind(nif).all();
       const parseArray = (value) => { try { const parsed = JSON.parse(value || "[]"); return Array.isArray(parsed) ? parsed : []; } catch { return []; } };
-      const recent = parseArray(profile.recent_contracts_json).slice(0, 3);
       return json({
         ok: true,
         summary: {
@@ -203,12 +206,7 @@ export default {
           total_value: Number(profile.awarded_value_total || 0),
           latest_date: profile.latest_contract_date || null
         },
-        procurements: recent.map(item => ({
-          source_id: item.source_id, participant_role: item.participant_role,
-          publication_date: item.date, description: item.description,
-          cpv: item.cpv, contracting_authority: item.authority,
-          contract_value: item.value, procedure_url: item.url
-        })),
+        procurements: history.results || [],
         top_cpv: parseArray(profile.top_cpv_json),
         top_authorities: parseArray(profile.top_authorities_json)
       });
@@ -292,6 +290,37 @@ export default {
       return json({ ok: true, decision_maker_id: personId }, 201);
     }
 
+    if (request.method === "POST" && url.pathname === "/internal/import/contracts/batch") {
+      if (!authorized(request, env.INGEST_SECRET)) return json({ ok: false, error: "Unauthorized" }, 401);
+      const body = await request.json().catch(() => null);
+      if (!body || !Array.isArray(body.contracts) || body.contracts.length > 500) {
+        return json({ ok: false, error: "Expected up to 500 discovery contract records." }, 400);
+      }
+      const statements = [];
+      for (const item of body.contracts) {
+        if (!item || typeof item.source_id !== "string" || !item.source_id.trim() ||
+            typeof item.nif !== "string" || !/^\\d{9}$/.test(item.nif) ||
+            typeof item.company_name !== "string" || !item.company_name.trim() ||
+            !["awardee", "competitor_confirmed"].includes(item.participant_role)) {
+          return json({ ok: false, error: "Every contract needs source_id, valid NIF, company_name and participant_role." }, 400);
+        }
+        const amount = item.contract_value === null || item.contract_value === undefined ? null : Number(item.contract_value);
+        if (amount !== null && (!Number.isFinite(amount) || amount < 0)) return json({ ok: false, error: "Invalid contract_value." }, 400);
+        statements.push(env.DB.prepare("INSERT INTO discovery_contracts (source_id,nif,company_name,participant_role,procedure_type,cpv,description,contracting_authority,contract_value,publication_date,procedure_url,source_dataset) VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(source_id,nif) DO UPDATE SET company_name=excluded.company_name,participant_role=excluded.participant_role,procedure_type=excluded.procedure_type,cpv=excluded.cpv,description=excluded.description,contracting_authority=excluded.contracting_authority,contract_value=excluded.contract_value,publication_date=excluded.publication_date,procedure_url=excluded.procedure_url,source_dataset=excluded.source_dataset,imported_at=CURRENT_TIMESTAMP").bind(
+          item.source_id.trim().slice(0,160), item.nif, item.company_name.trim().slice(0,200), item.participant_role,
+          typeof item.procedure_type === "string" ? item.procedure_type.slice(0,100) : null,
+          typeof item.cpv === "string" ? item.cpv.slice(0,30) : null,
+          typeof item.description === "string" ? item.description.slice(0,500) : null,
+          typeof item.contracting_authority === "string" ? item.contracting_authority.slice(0,200) : null,
+          amount,
+          typeof item.publication_date === "string" ? item.publication_date.slice(0,10) : null,
+          typeof item.procedure_url === "string" ? item.procedure_url.slice(0,500) : null,
+          typeof item.source_dataset === "string" ? item.source_dataset.slice(0,120) : "BASE contratos"
+        ));
+      }
+      const result = statements.length ? await env.DB.batch(statements) : [];
+      return json({ ok: true, contracts_received: body.contracts.length, records_saved: result.length });
+    }
     if (request.method === "POST" && url.pathname === "/internal/import/batch") {
       if (!authorized(request, env.INGEST_SECRET)) return json({ ok: false, error: "Unauthorized" }, 401);
       const body = await request.json().catch(() => null);
