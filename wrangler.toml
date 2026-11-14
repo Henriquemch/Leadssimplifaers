@@ -1,0 +1,13 @@
+name = "leadpilot-api-dev"
+main = "worker/index.mjs"
+compatibility_date = "2026-11-13"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "leadpilot"
+database_id = "fcea37de-694c-4bc2-ad72-4b70c8e21740"
+migrations_dir = "migrations"
+
+[vars]
+APP_ENV = "staging"
+APP_ORIGIN = "https://deploy-preview-1--scintillating-toffee-a507d8.netlify.app"

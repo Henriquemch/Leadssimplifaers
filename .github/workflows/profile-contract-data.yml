@@ -1,5 +1,11 @@
 name: Profile official BASE contract files
 on:
+  push:
+    branches: ["migration/**"]
+    paths:
+      - "scripts/profile-contract-data.py"
+      - "scripts/check-sources.mjs"
+      - ".github/workflows/profile-contract-data.yml"
   workflow_dispatch:
   schedule:
     - cron: "47 6 * * 1"

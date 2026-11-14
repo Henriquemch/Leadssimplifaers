@@ -1,9 +1,17 @@
-name: LeadPilot parser tests
+name: LeadPilot parser and D1 foundation tests
 on:
   push:
-    branches: [main]
+    branches: [main, "migration/**"]
     paths:
       - "scripts/**"
+      - "tests/**"
+      - "migrations/**"
+      - "worker/**"
+      - "netlify/**"
+      - "index.html"
+      - "netlify.toml"
+      - "AUTH_SETUP.md"
+      - "wrangler.toml"
       - ".github/workflows/test-parser.yml"
   workflow_dispatch:
 permissions:
@@ -16,6 +24,60 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - run: python -m pip install --disable-pip-version-check openpyxl
-      - run: python -m py_compile scripts/profile-contract-data.py
+      - run: python -m py_compile scripts/profile-contract-data.py scripts/import-base-contracts.py
       - run: python -m unittest discover -s tests -v
+      - name: Validate D1 SQLite migration
+        run: |
+          python - <<'PY'
+          import sqlite3
+          db = sqlite3.connect(":memory:")
+          db.executescript(open("migrations/0001_initial.sql", encoding="utf-8").read())
+          db.executescript(open("migrations/0002_prospecting_workflow.sql", encoding="utf-8").read())
+          db.executescript(open("migrations/0003_remove_raw_procurement_payload.sql", encoding="utf-8").read())
+          db.executescript(open("migrations/0004_multi_company_procurements.sql", encoding="utf-8").read())
+          db.executescript(open("migrations/0005_compact_company_contract_profiles.sql", encoding="utf-8").read())
+          db.executescript(open("migrations/0006_discovery_and_exclusions.sql", encoding="utf-8").read())
+          db.executescript(open("migrations/0007_discovery_search_indexes.sql", encoding="utf-8").read())
+          db.executescript(open("migrations/0008_discovery_contract_history.sql", encoding="utf-8").read())
+          names = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+          expected = {"companies", "decision_makers", "approval_events", "import_runs", "source_files", "discovery_profiles", "lead_exclusions", "discovery_contracts"}
+          assert expected <= names, (expected - names)
+          company_columns = {row[1] for row in db.execute("PRAGMA table_info(companies)")}
+          assert {"qualification_status", "customer_status", "contacted_status", "active_process_status", "commercial_status"} <= company_columns
+          assert "company_events" in names
+          assert "procurements" not in names
+          profile_columns = {row[1] for row in db.execute("PRAGMA table_info(companies)")}
+          assert {"contract_count", "awardee_contract_count", "competitor_contract_count", "awarded_value_total", "top_cpv_json", "top_authorities_json", "recent_contracts_json"} <= profile_columns
+          print("D1 schema and prospecting workflow OK:", ", ".join(sorted(expected)))
+          PY
+      - name: Validate Worker JavaScript syntax
+        run: node --check worker/index.mjs
+      - name: Validate inline application JavaScript syntax
+        run: |
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          class Scripts(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.active = False
+                  self.parts = []
+              def handle_starttag(self, tag, attrs):
+                  if tag == 'script': self.active = True
+              def handle_endtag(self, tag):
+                  if tag == 'script': self.active = False
+              def handle_data(self, data):
+                  if self.active: self.parts.append(data)
+          parser = Scripts()
+          parser.feed(Path('index.html').read_text(encoding='utf-8'))
+          source = '\n'.join(parser.parts)
+          if not source.strip(): raise SystemExit('No inline JavaScript found')
+          Path('/tmp/leadpilot-inline.js').write_text(source, encoding='utf-8')
+          PY
+          node --check /tmp/leadpilot-inline.js
+      - name: Run application and API tests
+        run: node --test tests/*.test.mjs
