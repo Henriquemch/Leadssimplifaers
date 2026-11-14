@@ -114,8 +114,11 @@ export default {
       const values = [];
       const q = (url.searchParams.get("q") || "").trim().slice(0, 100);
       if (q) { filters.push("(d.name LIKE ? OR d.nif LIKE ?)"); values.push("%" + q + "%", "%" + q + "%"); }
-      const cpv = (url.searchParams.get("cpv") || "").trim().slice(0, 12);
-      if (cpv) { filters.push("EXISTS (SELECT 1 FROM discovery_contracts dc WHERE dc.nif = d.nif AND dc.cpv = ?)"); values.push(cpv); }
+      const cpv = (url.searchParams.get("cpv") || "").trim().replace(/[^0-9-]/g, "").slice(0, 12);
+      const sector = (url.searchParams.get("sector") || "").trim().slice(0, 100);
+      if (cpv && sector) return json({ok:false,error:"Escolhe setor ou CPV, não ambos."},400);
+      if (cpv) { filters.push("EXISTS (SELECT 1 FROM discovery_contracts dc WHERE dc.nif = d.nif AND dc.cpv LIKE ?)"); values.push(cpv + "%"); }
+      if (sector) { filters.push("EXISTS (SELECT 1 FROM discovery_contracts dc WHERE dc.nif = d.nif AND (dc.description LIKE ? OR dc.cpv LIKE ?))"); values.push("%" + sector + "%", "%" + sector + "%"); }
       const fromDate = (url.searchParams.get("from_date") || "").trim();
       if (fromDate) { if (!/^\d{4}-\d{2}-\d{2}$/.test(fromDate) || Number.isNaN(Date.parse(fromDate))) return json({ok:false,error:"Invalid from_date."},400); filters.push("d.latest_contract_date >= ?"); values.push(fromDate); }
       const minValue = url.searchParams.get("min_value"), maxValue = url.searchParams.get("max_value");
@@ -124,7 +127,6 @@ export default {
       if (maxValue !== null && maxValue !== "") { maxNumber=Number(maxValue); if(!Number.isFinite(maxNumber)||maxNumber<0)return json({ok:false,error:"Invalid max_value."},400); filters.push("d.awarded_value_total <= ?"); values.push(maxNumber); }
       if (minNumber !== null && maxNumber !== null && minNumber > maxNumber) return json({ok:false,error:"min_value cannot exceed max_value."},400);
       const role = url.searchParams.get("role"); if (role && !["awardee","competitor_confirmed"].includes(role)) return json({ok:false,error:"Invalid role filter."},400); if (role === "awardee") filters.push("d.awardee_contract_count > 0"); if (role === "competitor_confirmed") filters.push("d.competitor_contract_count > 0");
-      if (!q && !cpv && minNumber === null && maxNumber === null && !fromDate) return json({ok:false,error:"Define pelo menos um filtro antes de pesquisar."},400);
       const sql = "SELECT d.id,d.nif,d.name,d.evidence_type,d.contract_count,d.awardee_contract_count,d.competitor_contract_count,d.awarded_value_total,d.latest_contract_date,d.top_cpv_json,d.top_authorities_json,d.recent_contracts_json FROM discovery_profiles d WHERE " + filters.join(" AND ") + " ORDER BY d.awarded_value_total DESC,d.latest_contract_date DESC LIMIT ?";
       const result = await env.DB.prepare(sql).bind(...values,limit).all(); return json({ok:true,companies:result.results||[],limit});
     }
