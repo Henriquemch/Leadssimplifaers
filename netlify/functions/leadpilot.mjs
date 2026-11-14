@@ -51,7 +51,15 @@ export default async (request) => {
       redirect: "manual"
     });
     const responseHeaders = new Headers(upstream.headers);
+
+    // fetch() may transparently decompress the upstream body. Forwarding
+    // the original encoding/length headers would make the browser try to
+    // decompress an already-decoded body (ERR_CONTENT_DECODING_FAILED).
+    responseHeaders.delete("content-encoding");
+    responseHeaders.delete("content-length");
+    responseHeaders.delete("transfer-encoding");
     responseHeaders.set("cache-control", "no-store");
+
     return new Response(upstream.body, {
       status: upstream.status,
       statusText: upstream.statusText,
