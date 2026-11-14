@@ -1,4 +1,5 @@
 name: Deploy LeadPilot staging Worker and D1 migrations
+# Staging deployment only; keep resources within the existing free-tier setup.
 
 on:
   push:
