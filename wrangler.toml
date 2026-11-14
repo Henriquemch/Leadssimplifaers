@@ -10,3 +10,4 @@ migrations_dir = "migrations"
 
 [vars]
 APP_ENV = "staging"
+APP_ORIGIN = "https://deploy-preview-1--scintillating-toffee-a507d8.netlify.app"
