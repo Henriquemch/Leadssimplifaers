@@ -143,6 +143,7 @@ export default {
       const body=await request.json().catch(()=>null); const nif=typeof body?.nif==="string"?body.nif.replaceAll(" ","").replaceAll("-",""):"";
       if(nif.length!==9||![...nif].every(ch=>ch>="0"&&ch<="9"))return json({ok:false,error:"A valid 9-digit NIF is required."},400);
       const found=await env.DB.prepare("SELECT * FROM discovery_profiles WHERE nif=? LIMIT 1").bind(nif).all(); const p=found.results?.[0]; if(!p)return json({ok:false,error:"Discovery profile not found."},404);
+      const crm=await env.DB.prepare("SELECT status FROM crm_verifications WHERE nif=? LIMIT 1").bind(nif).all(); if(crm.results?.[0]?.status!=="not_customer")return json({ok:false,error:"Confirma primeiro no CRM que a empresa não é cliente."},409);
       const existing=await env.DB.prepare("SELECT id FROM companies WHERE nif=? LIMIT 1").bind(nif).all(); if(existing.results?.length)return json({ok:false,error:"Already registered as a lead."},409);
       const excluded=await env.DB.prepare("SELECT nif FROM lead_exclusions WHERE nif=? AND active=1 LIMIT 1").bind(nif).all(); if(excluded.results?.length)return json({ok:false,error:"NIF blocked by administrative exclusion."},409);
       const companyId="nif:"+nif;
