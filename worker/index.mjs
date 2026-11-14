@@ -289,7 +289,7 @@ export default {
     if (request.method === "GET" && peopleMatch) {
       const companyId = decodeURIComponent(peopleMatch[1]);
       const result = await env.DB.prepare(
-        "SELECT id, full_name, job_title, professional_profile_url, source_url, provider, created_at FROM decision_makers WHERE company_id = ? ORDER BY created_at DESC LIMIT 50"
+        "SELECT id, full_name, job_title, email, phone, contact_type, review_status, notes, professional_profile_url, source_url, provider, created_at FROM decision_makers WHERE company_id = ? ORDER BY created_at DESC LIMIT 100"
       ).bind(companyId).all();
       return json({ ok: true, decision_makers: result.results || [] });
     }
@@ -312,14 +312,31 @@ export default {
           company.customer_status !== "no" || company.active_process_status !== "no") {
         return json({ ok: false, error: "Decision-maker research is blocked until the company is explicitly eligible for prospecting." }, 409);
       }
+      const contactType = ["general", "decision_maker"].includes(body.contact_type) ? body.contact_type : "decision_maker";
+      const reviewStatus = ["pending", "selected", "rejected"].includes(body.review_status) ? body.review_status : "pending";
       const personId = id();
-      await env.DB.prepare("INSERT INTO decision_makers (id, company_id, full_name, job_title, professional_profile_url, source_url, provider) VALUES (?, ?, ?, ?, ?, ?, ?)")
+      await env.DB.prepare("INSERT INTO decision_makers (id, company_id, full_name, job_title, email, phone, contact_type, review_status, notes, professional_profile_url, source_url, provider) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
         .bind(personId, body.company_id, body.full_name.trim().slice(0, 160),
           typeof body.job_title === "string" ? body.job_title.trim().slice(0, 120) : null,
+          typeof body.email === "string" ? body.email.trim().slice(0, 200) : null,
+          typeof body.phone === "string" ? body.phone.trim().slice(0, 60) : null,
+          contactType, reviewStatus,
+          typeof body.notes === "string" ? body.notes.trim().slice(0, 1000) : null,
           typeof body.profile_url === "string" ? body.profile_url.trim().slice(0, 500) : null,
           typeof body.source_url === "string" ? body.source_url.trim().slice(0, 500) : null,
           typeof body.source === "string" ? body.source.trim().slice(0, 40) : "manual").run();
       return json({ ok: true, decision_maker_id: personId }, 201);
+    }
+
+    const personStatusMatch = url.pathname.match(/^\\/api\\/decision-makers\\/([a-f0-9-]+)\\/review$/);
+    if (request.method === "PATCH" && personStatusMatch) {
+      const body = await request.json().catch(() => null);
+      if (!["pending", "selected", "rejected"].includes(body?.review_status)) {
+        return json({ ok: false, error: "Estado de seleção inválido." }, 400);
+      }
+      await env.DB.prepare("UPDATE decision_makers SET review_status = ?, notes = COALESCE(?, notes) WHERE id = ?")
+        .bind(body.review_status, typeof body.notes === "string" ? body.notes.trim().slice(0, 1000) : null, personStatusMatch[1]).run();
+      return json({ ok: true, decision_maker_id: personStatusMatch[1], review_status: body.review_status });
     }
 
     if (request.method === "GET" && url.pathname === "/internal/import/stats") {
