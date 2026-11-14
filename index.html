@@ -43,7 +43,7 @@ function field(label,name,value){return '<div class="field"><label>'+label+'</la
 async function renderPeople(){
  const root=$("peoplePanel"),c=state.selected;
  if(!c){root.textContent="Seleciona uma empresa elegível na Qualificação.";return}
- if(c.commercial_status!=="eligible"||c.qualification_status!=="approved"){root.innerHTML='<div class="notice">Bloqueado: a empresa tem de estar aprovada e elegível para prospeção.</div>';return}
+ if(c.commercial_status!=="eligible"||c.qualification_status!=="approved"){const apolloUrl="https://app.apollo.io/#/people",lushaUrl="https://app.lusha.com/prospecting",linkedinUrl="https://www.linkedin.com/search/results/people/?keywords="+encodeURIComponent(c.name);root.innerHTML='<div class="row"><a class="fit" href="'+apolloUrl+'" target="_blank" rel="noopener"><button type="button">Apollo</button></a><a class="fit" href="'+lushaUrl+'" target="_blank" rel="noopener"><button type="button" class="secondary">Lusha</button></a><a class="fit" href="'+linkedinUrl+'" target="_blank" rel="noopener"><button type="button" class="secondary">LinkedIn</button></a></div><div class="notice">Podes pesquisar a empresa nas plataformas. Para guardar contactos no LeadPilot, conclui primeiro a qualificação e a verificação comercial.</div>';return}
  try{
   const d=await api("/api/companies/"+encodeURIComponent(c.id)+"/decision-makers");
   const people=d.decision_makers||[];$("peopleCount").textContent=people.length;
