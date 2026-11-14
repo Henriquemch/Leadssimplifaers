@@ -290,6 +290,23 @@ export default {
       return json({ ok: true, decision_maker_id: personId }, 201);
     }
 
+    if (request.method === "GET" && url.pathname === "/internal/import/stats") {
+      if (!authorized(request, env.INGEST_SECRET)) return json({ ok: false, error: "Unauthorized" }, 401);
+      const [profiles, contracts, awardees, competitors] = await Promise.all([
+        env.DB.prepare("SELECT COUNT(*) AS total FROM discovery_profiles").first(),
+        env.DB.prepare("SELECT COUNT(*) AS total FROM discovery_contracts").first(),
+        env.DB.prepare("SELECT COUNT(*) AS total FROM discovery_contracts WHERE participant_role = 'awardee'").first(),
+        env.DB.prepare("SELECT COUNT(*) AS total FROM discovery_contracts WHERE participant_role = 'competitor_confirmed'").first()
+      ]);
+      return json({
+        ok: true,
+        discovery_profiles: Number(profiles?.total || 0),
+        discovery_contracts: Number(contracts?.total || 0),
+        awardee_participations: Number(awardees?.total || 0),
+        competitor_participations: Number(competitors?.total || 0)
+      });
+    }
+
     if (request.method === "POST" && url.pathname === "/internal/import/contracts/batch") {
       if (!authorized(request, env.INGEST_SECRET)) return json({ ok: false, error: "Unauthorized" }, 401);
       const body = await request.json().catch(() => null);
