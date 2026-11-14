@@ -181,6 +181,19 @@ def post_batch(worker_url, secret, companies):
         if response.status >= 300 or not result.get("ok"):
             raise RuntimeError("Worker rejeitou lote: " + str(result))
         return result
+ 
+def post_contract_batch(worker_url, secret, contracts):
+    payload = json.dumps({"contracts": contracts}, ensure_ascii=False, separators=(",", ":")).encode()
+    request = urllib.request.Request(
+        worker_url.rstrip("/") + "/internal/import/contracts/batch", data=payload, method="POST",
+        headers={"authorization": "Bearer " + secret, "content-type": "application/json"},
+    )
+    with urllib.request.urlopen(request, timeout=90) as response:
+        result = json.loads(response.read().decode("utf-8"))
+        if response.status >= 300 or not result.get("ok"):
+            raise RuntimeError("Worker rejeitou lote de contratos: " + str(result))
+        return result
+
 
 
 def empty_profile(company):
@@ -278,8 +291,10 @@ def main():
         raise SystemExit("Não foram encontrados arquivos anuais contratos2021–2026 no manifesto.")
     resources.sort(key=lambda item: item[0])
 
-    totals = {"files": 0, "rows_seen": 0, "rows_in_window": 0, "companies": 0, "company_participations": 0, "batches": 0}
+    totals = {"files": 0, "rows_seen": 0, "rows_in_window": 0, "companies": 0, "company_participations": 0, "profile_batches": 0, "contract_batches": 0, "contract_records": 0}
     profiles = OrderedDict()
+    contract_batch = []
+    contract_batch_size = 500
     for year, resource in resources:
         request = urllib.request.Request(resource["url"], headers={"User-Agent": "LeadPilot-BASE-import/1.0"})
         with urllib.request.urlopen(request, timeout=180) as response:
@@ -294,25 +309,50 @@ def main():
             for record in records:
                 add_profile_record(profiles, record)
                 totals["company_participations"] += 1
+                procurement = record["procurement"]
+                totals["contract_records"] += 1
+                if not dry_run:
+                    contract_batch.append({
+                        "source_id": procurement["source_id"],
+                        "nif": procurement["company_nif"],
+                        "company_name": procurement["company_name"],
+                        "participant_role": procurement["participant_role"],
+                        "procedure_type": procurement["procedure_type"],
+                        "cpv": procurement["cpv"],
+                        "description": procurement["description"],
+                        "contracting_authority": procurement["contracting_authority"],
+                        "contract_value": procurement["contract_value"] if procurement["participant_role"] == "awardee" else None,
+                        "publication_date": procurement["publication_date"],
+                        "procedure_url": procurement["procedure_url"],
+                        "source_dataset": "BASE contratos",
+                    })
+                    if len(contract_batch) >= contract_batch_size:
+                        post_contract_batch(worker_url, secret, contract_batch)
+                        totals["contract_batches"] += 1
+                        contract_batch = []
         del data
+
+    if contract_batch:
+        post_contract_batch(worker_url, secret, contract_batch)
+        totals["contract_batches"] += 1
 
     totals["companies"] = len(profiles)
     batch_size = 50
     ready = [finalize_profile(profile) for profile in profiles.values()]
     totals["profile_payload_bytes"] = sum(len(json.dumps(item, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) for item in ready)
     totals["average_profile_bytes"] = round(totals["profile_payload_bytes"] / len(ready)) if ready else 0
-    totals["estimated_batch_count"] = (len(ready) + batch_size - 1) // batch_size
+    totals["estimated_profile_batch_count"] = (len(ready) + batch_size - 1) // batch_size
     for start in range(0, len(ready), batch_size):
         batch = ready[start:start + batch_size]
         if not dry_run:
             post_batch(worker_url, secret, batch)
-        totals["batches"] += 1
+        totals["profile_batches"] += 1
 
     print(json.dumps({
         "mode": "dry_run" if dry_run else "imported",
         "cutoff": cutoff.isoformat(), "totals": totals,
-        "storage_model": "one company row with aggregate counters, top five CPVs, top five authorities and at most three recent contract references",
-        "note": "Apenas adjudicatários e concorrentes explicitamente listados com NIF válido. Valor acumulado considera apenas adjudicatários. Não são guardadas linhas integrais de contratos nem payloads brutos.",
+        "storage_model": "one compact profile per company plus one normalized discovery_contracts row per company-contract participation",
+        "note": "Apenas adjudicatários e concorrentes explicitamente listados com NIF válido. Valor acumulado considera apenas adjudicatários; valor por contrato é nulo para concorrentes. Não são guardadas linhas integrais nem payloads brutos."
     }, ensure_ascii=False, indent=2))
 
 
