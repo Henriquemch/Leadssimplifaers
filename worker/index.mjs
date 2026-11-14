@@ -127,8 +127,17 @@ export default {
       if (maxValue !== null && maxValue !== "") { maxNumber=Number(maxValue); if(!Number.isFinite(maxNumber)||maxNumber<0)return json({ok:false,error:"Invalid max_value."},400); filters.push("d.awarded_value_total <= ?"); values.push(maxNumber); }
       if (minNumber !== null && maxNumber !== null && minNumber > maxNumber) return json({ok:false,error:"min_value cannot exceed max_value."},400);
       const role = url.searchParams.get("role"); if (role && !["awardee","competitor_confirmed"].includes(role)) return json({ok:false,error:"Invalid role filter."},400); if (role === "awardee") filters.push("d.awardee_contract_count > 0"); if (role === "competitor_confirmed") filters.push("d.competitor_contract_count > 0");
-      const sql = "SELECT d.id,d.nif,d.name,d.evidence_type,d.contract_count,d.awardee_contract_count,d.competitor_contract_count,d.awarded_value_total,d.latest_contract_date,d.top_cpv_json,d.top_authorities_json,d.recent_contracts_json FROM discovery_profiles d WHERE " + filters.join(" AND ") + " ORDER BY d.awarded_value_total DESC,d.latest_contract_date DESC LIMIT ?";
+      const sql = "SELECT d.id,d.nif,d.name,d.evidence_type,d.contract_count,d.awardee_contract_count,d.competitor_contract_count,d.awarded_value_total,d.latest_contract_date,d.top_cpv_json,d.top_authorities_json,d.recent_contracts_json,(SELECT cv.status FROM crm_verifications cv WHERE cv.nif=d.nif LIMIT 1) AS crm_status FROM discovery_profiles d WHERE " + filters.join(" AND ") + " ORDER BY d.awarded_value_total DESC,d.latest_contract_date DESC LIMIT ?";
       const result = await env.DB.prepare(sql).bind(...values,limit).all(); return json({ok:true,companies:result.results||[],limit});
+    }
+    if (request.method === "POST" && url.pathname === "/api/discovery/crm-check") {
+      const body = await request.json().catch(() => null);
+      const nif = typeof body?.nif === "string" ? body.nif.replaceAll(" ", "").replaceAll("-", "") : "";
+      if (nif.length !== 9 || ![...nif].every(ch => ch >= "0" && ch <= "9")) return json({ ok: false, error: "NIF inválido." }, 400);
+      if (!["customer", "not_customer", "unknown"].includes(body?.status)) return json({ ok: false, error: "Estado CRM inválido." }, 400);
+      const name = typeof body?.name === "string" ? body.name.trim().slice(0, 200) : "";
+      await env.DB.prepare("INSERT INTO crm_verifications (nif,name,status,checked_at) VALUES (?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(nif) DO UPDATE SET name=excluded.name,status=excluded.status,checked_at=CURRENT_TIMESTAMP").bind(nif, name || "Empresa sem nome", body.status).run();
+      return json({ ok: true, nif, status: body.status });
     }
     if (request.method === "POST" && url.pathname === "/api/leads") {
       const body=await request.json().catch(()=>null); const nif=typeof body?.nif==="string"?body.nif.replaceAll(" ","").replaceAll("-",""):"";
