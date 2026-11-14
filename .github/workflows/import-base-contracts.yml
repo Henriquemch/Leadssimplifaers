@@ -35,7 +35,7 @@ jobs:
         run: python -m py_compile scripts/import-base-contracts.py scripts/profile-contract-data.py
       - name: Parse rolling 12-month BASE records
         env:
-          LEADPILOT_DRY_RUN: "true"
+          LEADPILOT_DRY_RUN: "false"
           LEADPILOT_MAX_RECORDS: "20"
           LEADPILOT_WORKER_URL: "https://leadpilot-api-dev.henriquemvm98.workers.dev"
           INGEST_SECRET: ${{ secrets.INGEST_SECRET }}
