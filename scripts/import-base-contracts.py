@@ -176,11 +176,15 @@ def post_batch(worker_url, secret, companies):
         worker_url.rstrip("/") + "/internal/import/batch", data=payload, method="POST",
         headers={"authorization": "Bearer " + secret, "content-type": "application/json"},
     )
-    with urllib.request.urlopen(request, timeout=60) as response:
-        result = json.loads(response.read().decode("utf-8"))
-        if response.status >= 300 or not result.get("ok"):
-            raise RuntimeError("Worker rejeitou lote: " + str(result))
-        return result
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            result = json.loads(response.read().decode("utf-8"))
+            if response.status >= 300 or not result.get("ok"):
+                raise RuntimeError("Worker rejeitou lote: " + str(result))
+            return result
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")[:1000]
+        raise RuntimeError(f"Worker respondeu HTTP {error.code} em /internal/import/batch: {detail}") from error
  
 def post_contract_batch(worker_url, secret, contracts):
     payload = json.dumps({"contracts": contracts}, ensure_ascii=False, separators=(",", ":")).encode()
@@ -188,11 +192,15 @@ def post_contract_batch(worker_url, secret, contracts):
         worker_url.rstrip("/") + "/internal/import/contracts/batch", data=payload, method="POST",
         headers={"authorization": "Bearer " + secret, "content-type": "application/json"},
     )
-    with urllib.request.urlopen(request, timeout=90) as response:
-        result = json.loads(response.read().decode("utf-8"))
-        if response.status >= 300 or not result.get("ok"):
-            raise RuntimeError("Worker rejeitou lote de contratos: " + str(result))
-        return result
+    try:
+        with urllib.request.urlopen(request, timeout=90) as response:
+            result = json.loads(response.read().decode("utf-8"))
+            if response.status >= 300 or not result.get("ok"):
+                raise RuntimeError("Worker rejeitou lote de contratos: " + str(result))
+            return result
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")[:1000]
+        raise RuntimeError(f"Worker respondeu HTTP {error.code} em /internal/import/contracts/batch: {detail}") from error
 
 
 
