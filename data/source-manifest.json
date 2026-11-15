@@ -1,9 +1,9 @@
 {
-  "checked_at": "2026-11-14T12:13:53.700Z",
+  "checked_at": "2026-11-15T12:46:48.866Z",
   "scope": {
     "country": "Portugal",
     "history_years": 5,
-    "from": "2021-11-14"
+    "from": "2021-11-15"
   },
   "sources": [
     {
@@ -12,7 +12,7 @@
       "id": "66d72d488ca4b7cb2de28712",
       "title": "Contratos Públicos - Portal Base - IMPIC - Contratos de 2012 a 2026",
       "organization": "IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção",
-      "modified": "2026-11-08T14:43:50.183000+00:00",
+      "modified": "2026-11-15T10:08:24.512000+00:00",
       "frequency": "weekly",
       "license": "other-pd",
       "resources": [
@@ -20,9 +20,9 @@
           "id": "dc5d0543-6e01-4f7e-8709-bf3815812a08",
           "title": "contratos2026.zip",
           "format": "zip",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261108-100632-ae8bd670/contratos2026.zip",
-          "modified": "2026-11-08T10:06:32.708000+00:00",
-          "filesize": 68570156
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261115-100642-624650f6/contratos2026.zip",
+          "modified": "2026-11-15T10:06:42.704000+00:00",
+          "filesize": 69765818
         },
         {
           "id": "344d19b2-7dcf-4716-aa2d-4cec42a5c834",
@@ -148,113 +148,113 @@
           "id": "7d0a3719-a477-4b91-ba0a-3033b13d790d",
           "title": "contratos2025.zip",
           "format": "zip",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261108-100645-2b435cdc/contratos2025.zip",
-          "modified": "2026-11-08T10:06:45.896000+00:00",
-          "filesize": 77724612
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261115-100657-5259fa0a/contratos2025.zip",
+          "modified": "2026-11-15T10:06:57.438000+00:00",
+          "filesize": 77653545
         },
         {
           "id": "5b250e82-3386-49b7-bd53-fa54cea9006e",
           "title": "contratos2024.zip",
           "format": "zip",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261108-100656-5c37deb6/contratos2024.zip",
-          "modified": "2026-11-08T10:06:56.597000+00:00",
-          "filesize": 62987934
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261115-100711-bf12b059/contratos2024.zip",
+          "modified": "2026-11-15T10:07:11.547000+00:00",
+          "filesize": 62757979
         },
         {
           "id": "f487d3c7-27dc-4ca6-a4c7-652ad2a13bdf",
           "title": "contratos2023.zip",
           "format": "zip",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261108-100705-36ec162e/contratos2023.zip",
-          "modified": "2026-11-08T10:07:05.924000+00:00",
-          "filesize": 55059870
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261115-100720-cc50433b/contratos2023.zip",
+          "modified": "2026-11-15T10:07:20.853000+00:00",
+          "filesize": 54945832
         },
         {
           "id": "364ef87d-f518-45b7-b8e2-aa0ad1fa71f9",
           "title": "contratos2022.zip",
           "format": "zip",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261108-100714-7f7519d0/contratos2022.zip",
-          "modified": "2026-11-08T10:07:14.307000+00:00",
-          "filesize": 49445747
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261115-100729-3377e4f0/contratos2022.zip",
+          "modified": "2026-11-15T10:07:29.174000+00:00",
+          "filesize": 49261183
         },
         {
           "id": "c507f3f8-c742-46a3-9a39-de3002ab1aca",
           "title": "contratos2021.zip",
           "format": "zip",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261108-100722-b99dd9b0/contratos2021.zip",
-          "modified": "2026-11-08T10:07:22.802000+00:00",
-          "filesize": 50113110
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261115-100737-4c85a3cc/contratos2021.zip",
+          "modified": "2026-11-15T10:07:37.663000+00:00",
+          "filesize": 49987214
         },
         {
           "id": "9b726c0c-3bba-42cd-8b62-cf66222c4b12",
           "title": "contratos2020.zip",
           "format": "zip",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261108-100730-efbc7e3f/contratos2020.zip",
-          "modified": "2026-11-08T10:07:30.211000+00:00",
-          "filesize": 43737423
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261115-100745-30425d0f/contratos2020.zip",
+          "modified": "2026-11-15T10:07:45.077000+00:00",
+          "filesize": 43648423
         },
         {
           "id": "3ef2f1b5-ab20-4009-be4c-9855c4a71a7e",
           "title": "contratos2019.zip",
           "format": "zip",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261108-100736-2f2fa4ff/contratos2019.zip",
-          "modified": "2026-11-08T10:07:36.591000+00:00",
-          "filesize": 36636958
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261115-100751-66fe0853/contratos2019.zip",
+          "modified": "2026-11-15T10:07:51.270000+00:00",
+          "filesize": 36556889
         },
         {
           "id": "3eae5a8c-5c69-46c7-84a4-d1f5069764ea",
           "title": "contratos2018.zip",
           "format": "zip",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261108-100742-f1c20bdf/contratos2018.zip",
-          "modified": "2026-11-08T10:07:42.619000+00:00",
-          "filesize": 36556239
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261115-100757-fcbdce68/contratos2018.zip",
+          "modified": "2026-11-15T10:07:57.476000+00:00",
+          "filesize": 36515081
         },
         {
           "id": "288cc4ab-8fcd-41c9-95ee-0e1e62bb6dce",
           "title": "contratos2017.zip",
           "format": "zip",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261108-100748-77717881/contratos2017.zip",
-          "modified": "2026-11-08T10:07:49.004000+00:00",
-          "filesize": 37649320
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261115-100803-73bdbb52/contratos2017.zip",
+          "modified": "2026-11-15T10:08:03.855000+00:00",
+          "filesize": 37620570
         },
         {
           "id": "2aab8db8-50df-44da-b03c-f9b4b9aabb8c",
           "title": "contratos2016.zip",
           "format": "zip",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261108-100754-dbff2fcc/contratos2016.zip",
-          "modified": "2026-11-08T10:07:54.759000+00:00",
-          "filesize": 33914041
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261115-100809-26d75ac7/contratos2016.zip",
+          "modified": "2026-11-15T10:08:09.609000+00:00",
+          "filesize": 33903526
         },
         {
           "id": "f0611cf1-6fcb-4dd9-b86a-cef9ecf5d187",
           "title": "contratos2015.zip",
           "format": "zip",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261108-100759-d3529b25/contratos2015.zip",
-          "modified": "2026-11-08T10:07:59.351000+00:00",
-          "filesize": 27141898
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261115-100814-536710e6/contratos2015.zip",
+          "modified": "2026-11-15T10:08:14.222000+00:00",
+          "filesize": 27124054
         },
         {
           "id": "8d4afd3c-d013-4af9-9aca-72396d40852e",
           "title": "contratos2014.zip",
           "format": "zip",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261108-100803-f6fe442b/contratos2014.zip",
-          "modified": "2026-11-08T10:08:03.534000+00:00",
-          "filesize": 24564237
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261115-100818-cad87fe4/contratos2014.zip",
+          "modified": "2026-11-15T10:08:18.351000+00:00",
+          "filesize": 24546593
         },
         {
           "id": "5040df44-b1d8-428a-b087-48dbf3ccc660",
           "title": "contratos2013.zip",
           "format": "zip",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261108-100806-fa94359e/contratos2013.zip",
-          "modified": "2026-11-08T10:08:06.969000+00:00",
-          "filesize": 20317231
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261115-100821-edb3e6c8/contratos2013.zip",
+          "modified": "2026-11-15T10:08:21.791000+00:00",
+          "filesize": 20307536
         },
         {
           "id": "7d993ea1-f589-42bd-81ef-dba2505c92c4",
           "title": "contratos2012.zip",
           "format": "zip",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261108-100809-bf0d5cde/contratos2012.zip",
-          "modified": "2026-11-08T10:08:09.691000+00:00",
-          "filesize": 16002617
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20261115-100824-13b5cc5a/contratos2012.zip",
+          "modified": "2026-11-15T10:08:24.498000+00:00",
+          "filesize": 15992618
         }
       ]
     },
@@ -264,7 +264,7 @@
       "id": "66d72fbc58cd7a63dae28712",
       "title": "Contratos Públicos - Portal Base - IMPIC - Anúncios de 2012 a 2026",
       "organization": "IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção",
-      "modified": "2026-11-08T14:44:05.456000+00:00",
+      "modified": "2026-11-15T10:10:03.158000+00:00",
       "frequency": "weekly",
       "license": "other-pd",
       "resources": [
@@ -272,9 +272,9 @@
           "id": "1002987e-8985-492f-9215-e732fffdbc83",
           "title": "anuncios2026.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261108-100820-603115fe/anuncios2026.json",
-          "modified": "2026-11-08T10:08:20.106000+00:00",
-          "filesize": 61012387
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261115-100835-12f6edfa/anuncios2026.json",
+          "modified": "2026-11-15T10:08:35.103000+00:00",
+          "filesize": 62089849
         },
         {
           "id": "28876c29-b98b-4945-a11e-5d1cb4580c2b",
@@ -400,113 +400,113 @@
           "id": "f7883546-cee5-43bf-83df-a383d108acf1",
           "title": "anuncios2025.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261108-100833-68c50f93/anuncios2025.json",
-          "modified": "2026-11-08T10:08:33.721000+00:00",
-          "filesize": 80055263
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261115-100848-5bf93da3/anuncios2025.json",
+          "modified": "2026-11-15T10:08:48.758000+00:00",
+          "filesize": 80045103
         },
         {
           "id": "39f6af5b-517a-46d2-b902-24ff635e62f4",
           "title": "anuncios2024.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261108-100845-cedb27bc/anuncios2024.json",
-          "modified": "2026-11-08T10:08:45.472000+00:00",
-          "filesize": 69355272
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261115-100900-22feb786/anuncios2024.json",
+          "modified": "2026-11-15T10:09:00.512000+00:00",
+          "filesize": 69332770
         },
         {
           "id": "6eefae56-26ec-4022-9071-dcb42b732046",
           "title": "anuncios2023.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261108-100901-98f72b6d/anuncios2023.json",
-          "modified": "2026-11-08T10:09:01.558000+00:00",
-          "filesize": 94458316
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261115-100916-37fdd673/anuncios2023.json",
+          "modified": "2026-11-15T10:09:16.539000+00:00",
+          "filesize": 94437566
         },
         {
           "id": "5c7c48e9-19e9-48c8-ab83-16baf76171ce",
           "title": "anuncios2022.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261108-100912-f98d1928/anuncios2022.json",
-          "modified": "2026-11-08T10:09:12.924000+00:00",
-          "filesize": 67332685
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261115-100928-ebff1eeb/anuncios2022.json",
+          "modified": "2026-11-15T10:09:29.012000+00:00",
+          "filesize": 67322454
         },
         {
           "id": "267f09a0-7203-4590-97f1-903f4bbadc9b",
           "title": "anuncios2021.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261108-100918-854b265c/anuncios2021.json",
-          "modified": "2026-11-08T10:09:18.875000+00:00",
-          "filesize": 35337383
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261115-100934-d44efae8/anuncios2021.json",
+          "modified": "2026-11-15T10:09:34.416000+00:00",
+          "filesize": 35316030
         },
         {
           "id": "fc086e31-d6ef-4fd6-a016-17394abf27b7",
           "title": "anuncios2020.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261108-100924-b7699ab2/anuncios2020.json",
-          "modified": "2026-11-08T10:09:24.049000+00:00",
-          "filesize": 30501249
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261115-100939-b73c0eff/anuncios2020.json",
+          "modified": "2026-11-15T10:09:39.590000+00:00",
+          "filesize": 30487004
         },
         {
           "id": "6587f45b-aded-49af-ba24-74a2a0a7f115",
           "title": "anuncios2019.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261108-100928-b85b8a67/anuncios2019.json",
-          "modified": "2026-11-08T10:09:28.876000+00:00",
-          "filesize": 28488902
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261115-100944-421c42dd/anuncios2019.json",
+          "modified": "2026-11-15T10:09:44.408000+00:00",
+          "filesize": 28474989
         },
         {
           "id": "8a6aafe9-c75b-4fa1-a363-a3d9774c693e",
           "title": "anuncios2018.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261108-100932-dfcac77c/anuncios2018.json",
-          "modified": "2026-11-08T10:09:32.938000+00:00",
-          "filesize": 23870123
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261115-100948-5b940baf/anuncios2018.json",
+          "modified": "2026-11-15T10:09:48.455000+00:00",
+          "filesize": 23858752
         },
         {
           "id": "6fc03f37-4c5d-4ab1-92f9-2287a626e870",
           "title": "anuncios2017.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261108-100936-e05b0bb7/anuncios2017.json",
-          "modified": "2026-11-08T10:09:36.297000+00:00",
-          "filesize": 19892692
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261115-100951-1386027d/anuncios2017.json",
+          "modified": "2026-11-15T10:09:51.837000+00:00",
+          "filesize": 19882937
         },
         {
           "id": "ff99474c-1019-4cb0-9022-faf77481aa25",
           "title": "anuncios2016.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261108-100939-777950ea/anuncios2016.json",
-          "modified": "2026-11-08T10:09:39.155000+00:00",
-          "filesize": 16199821
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261115-100954-971f65a2/anuncios2016.json",
+          "modified": "2026-11-15T10:09:54.559000+00:00",
+          "filesize": 16190797
         },
         {
           "id": "ff745d13-0bfc-4803-8d0d-09fb2a26adff",
           "title": "anuncios2015.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261108-100941-19d27c70/anuncios2015.json",
-          "modified": "2026-11-08T10:09:41.376000+00:00",
-          "filesize": 13781202
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261115-100956-99a0b231/anuncios2015.json",
+          "modified": "2026-11-15T10:09:56.893000+00:00",
+          "filesize": 13771580
         },
         {
           "id": "3837558e-85b3-4ca6-b991-10e2f90ce683",
           "title": "anuncios2014.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261108-100943-f9fca481/anuncios2014.json",
-          "modified": "2026-11-08T10:09:43.798000+00:00",
-          "filesize": 14013278
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261115-100959-cdf1f240/anuncios2014.json",
+          "modified": "2026-11-15T10:09:59.321000+00:00",
+          "filesize": 14007476
         },
         {
           "id": "2b3ea6a4-c2a3-44ac-ade8-49557fdee344",
           "title": "anuncios2013.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261108-100945-80f188fa/anuncios2013.json",
-          "modified": "2026-11-08T10:09:45.830000+00:00",
-          "filesize": 12057805
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261115-101001-c7c29a76/anuncios2013.json",
+          "modified": "2026-11-15T10:10:01.337000+00:00",
+          "filesize": 12051577
         },
         {
           "id": "797d66be-e55b-4395-a618-d76c1c671b5e",
           "title": "anuncios2012.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261108-100947-dc6de819/anuncios2012.json",
-          "modified": "2026-11-08T10:09:47.335000+00:00",
-          "filesize": 9061937
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/20261115-101003-89ffd525/anuncios2012.json",
+          "modified": "2026-11-15T10:10:03.148000+00:00",
+          "filesize": 9057413
         }
       ]
     },
@@ -516,7 +516,7 @@
       "id": "67d80b2c4750b888116940fb",
       "title": "Contratos Públicos - Portal Base - IMPIC - Entidades",
       "organization": "IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção",
-      "modified": "2026-11-08T14:44:12.275000+00:00",
+      "modified": "2026-11-15T10:10:20.167000+00:00",
       "frequency": "weekly",
       "license": "other-pd",
       "resources": [
@@ -532,9 +532,9 @@
           "id": "d85c49f0-b6ab-4cb7-afbe-4e103016b9a0",
           "title": "entidades.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-entidades/20261108-101003-cab1aaf9/entidades.json",
-          "modified": "2026-11-08T10:10:03.987000+00:00",
-          "filesize": 51761081
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-entidades/20261115-101020-f1e3a1f9/entidades.json",
+          "modified": "2026-11-15T10:10:20.124000+00:00",
+          "filesize": 51841575
         }
       ]
     },
@@ -544,7 +544,7 @@
       "id": "668d65dbcb1b953e80198435",
       "title": "Contratos Públicos - Portal Base - IMPIC - Modificações Contratuais de 2012 a 2026",
       "organization": "IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção",
-      "modified": "2026-11-08T14:44:10.341000+00:00",
+      "modified": "2026-11-15T10:10:11.975000+00:00",
       "frequency": "weekly",
       "license": "other-pd",
       "resources": [
@@ -552,9 +552,9 @@
           "id": "d6d13c09-418e-443b-bbf4-b9bd77097571",
           "title": "modcontrats2026.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261108-100947-9e8f802e/modcontrats2026.json",
-          "modified": "2026-11-08T10:09:47.903000+00:00",
-          "filesize": 2018335
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261115-101003-e3c4424f/modcontrats2026.json",
+          "modified": "2026-11-15T10:10:03.726000+00:00",
+          "filesize": 2117032
         },
         {
           "id": "7b10e99c-94b9-48f0-9a70-2d65f9357b1e",
@@ -680,113 +680,113 @@
           "id": "54f99ee8-abbc-411b-b38f-f5221118a95d",
           "title": "modcontrats2025.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261108-100948-37b1c2e6/modcontrats2025.json",
-          "modified": "2026-11-08T10:09:48.869000+00:00",
-          "filesize": 5918714
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261115-101004-ca10dc01/modcontrats2025.json",
+          "modified": "2026-11-15T10:10:04.366000+00:00",
+          "filesize": 6319116
         },
         {
           "id": "54bdb060-a6da-4ea7-a60c-91973a99911c",
           "title": "modcontrats2024.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261108-100949-b39a654d/modcontrats2024.json",
-          "modified": "2026-11-08T10:09:49.723000+00:00",
-          "filesize": 6144257
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261115-101005-d4f62e07/modcontrats2024.json",
+          "modified": "2026-11-15T10:10:05.773000+00:00",
+          "filesize": 6602804
         },
         {
           "id": "07e7814e-1d59-4167-9c8c-866be14d7a2e",
           "title": "modcontrats2023.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261108-100950-a94e56fb/modcontrats2023.json",
-          "modified": "2026-11-08T10:09:50.714000+00:00",
-          "filesize": 5551971
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261115-101006-5323278d/modcontrats2023.json",
+          "modified": "2026-11-15T10:10:06.447000+00:00",
+          "filesize": 6043444
         },
         {
           "id": "d8a80644-d94f-4970-90c5-bfd451f7fbad",
           "title": "modcontrats2022.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261108-100951-a977d2df/modcontrats2022.json",
-          "modified": "2026-11-08T10:09:51.858000+00:00",
-          "filesize": 4061377
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261115-101007-1595dfd6/modcontrats2022.json",
+          "modified": "2026-11-15T10:10:07.731000+00:00",
+          "filesize": 4464789
         },
         {
           "id": "5411db56-11a0-4296-b0d3-8c89cf9d3448",
           "title": "modcontrats2021.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261108-100952-da709c27/modcontrats2021.json",
-          "modified": "2026-11-08T10:09:52.744000+00:00",
-          "filesize": 3897444
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261115-101008-7d84f5e2/modcontrats2021.json",
+          "modified": "2026-11-15T10:10:08.699000+00:00",
+          "filesize": 4227404
         },
         {
           "id": "c6d7cc77-88a6-4814-94aa-7a340a111943",
           "title": "modcontrats2020.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261108-100953-11ae0cf9/modcontrats2020.json",
-          "modified": "2026-11-08T10:09:53.510000+00:00",
-          "filesize": 3219108
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261115-101009-7cb4d0a2/modcontrats2020.json",
+          "modified": "2026-11-15T10:10:09.509000+00:00",
+          "filesize": 3564482
         },
         {
           "id": "fe8ff25b-39a7-4c4c-9fd9-2a63c650ba37",
           "title": "modcontrats2019.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261108-100953-d414cc42/modcontrats2019.json",
-          "modified": "2026-11-08T10:09:53.956000+00:00",
-          "filesize": 1395384
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261115-101009-89860b38/modcontrats2019.json",
+          "modified": "2026-11-15T10:10:09.979000+00:00",
+          "filesize": 1558011
         },
         {
           "id": "1cf40cde-6468-44b8-bbc3-6ca320065b0d",
           "title": "modcontrats2018.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261108-100954-0fa9be86/modcontrats2018.json",
-          "modified": "2026-11-08T10:09:54.320000+00:00",
-          "filesize": 980756
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261115-101010-ea5a4fcd/modcontrats2018.json",
+          "modified": "2026-11-15T10:10:10.359000+00:00",
+          "filesize": 1137398
         },
         {
           "id": "1a05eb14-5914-459d-a368-96ef062bd9d5",
           "title": "modcontrats2017.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261108-100954-663ad6a2/modcontrats2017.json",
-          "modified": "2026-11-08T10:09:54.603000+00:00",
-          "filesize": 605825
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261115-101010-1643159e/modcontrats2017.json",
+          "modified": "2026-11-15T10:10:10.669000+00:00",
+          "filesize": 741877
         },
         {
           "id": "d44ec685-483b-4629-bbf8-4517e45e41ef",
           "title": "modcontrats2016.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261108-100954-4fb4f7ce/modcontrats2016.json",
-          "modified": "2026-11-08T10:09:54.854000+00:00",
-          "filesize": 433585
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261115-101010-97d9e977/modcontrats2016.json",
+          "modified": "2026-11-15T10:10:10.950000+00:00",
+          "filesize": 542506
         },
         {
           "id": "f7e06578-3f2c-4bf9-ad11-f6ea542e32ed",
           "title": "modcontrats2015.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261108-100955-902dfe5c/modcontrats2015.json",
-          "modified": "2026-11-08T10:09:55.105000+00:00",
-          "filesize": 366437
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261115-101011-2c97965d/modcontrats2015.json",
+          "modified": "2026-11-15T10:10:11.234000+00:00",
+          "filesize": 469644
         },
         {
           "id": "3e5cdce4-dba0-4adf-a380-9669c60c60af",
           "title": "modcontrats2014.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261108-100955-0ff97e40/modcontrats2014.json",
-          "modified": "2026-11-08T10:09:55.363000+00:00",
-          "filesize": 330410
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261115-101011-eeae1899/modcontrats2014.json",
+          "modified": "2026-11-15T10:10:11.501000+00:00",
+          "filesize": 417805
         },
         {
           "id": "a3a731a8-3a6d-449c-a252-6cd6f0a0e44d",
           "title": "modcontrats2013.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261108-100955-cc6408f3/modcontrats2013.json",
-          "modified": "2026-11-08T10:09:55.625000+00:00",
-          "filesize": 247195
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261115-101011-c9517676/modcontrats2013.json",
+          "modified": "2026-11-15T10:10:11.736000+00:00",
+          "filesize": 314160
         },
         {
           "id": "253a9916-5514-4125-9f2a-858be123c430",
           "title": "modcontrats2012.json",
           "format": "json",
-          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261108-100955-639fcf59/modcontrats2012.json",
-          "modified": "2026-11-08T10:09:55.845000+00:00",
-          "filesize": 183254
+          "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/20261115-101011-645c0186/modcontrats2012.json",
+          "modified": "2026-11-15T10:10:11.974000+00:00",
+          "filesize": 231057
         }
       ]
     }
