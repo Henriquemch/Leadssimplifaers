@@ -259,8 +259,8 @@ export default {
     const procurementMatch = url.pathname.match(/^\/api\/companies\/([^/]+)\/procurements$/);
     if (request.method === "GET" && procurementMatch) {
       const companyId = decodeURIComponent(procurementMatch[1]);
-      const exists = await env.DB.prepare("SELECT id FROM companies WHERE id = ? LIMIT 1").bind(companyId).first();
-      if (!exists) return json({ ok: false, error: "Company not found." }, 404);
+      const exists = await env.DB.prepare("SELECT id FROM companies WHERE id = ? LIMIT 1").bind(companyId).all();
+      if (!exists.results?.length) return json({ ok: false, error: "Company not found." }, 404);
       const nif = companyId.startsWith("nif:") ? companyId.slice(4) : "";
       const months = Number(url.searchParams.get("months") || 12);
       if (![12, 24].includes(months)) return json({ ok: false, error: "months must be 12 or 24." }, 400);
@@ -269,14 +269,15 @@ export default {
       const since = new Date(); since.setMonth(since.getMonth() - months);
       const fromDate = since.toISOString().slice(0, 10);
       const where = "nif = ? AND publication_date >= ?";
-      const summary = await env.DB.prepare(
+      const summaryResult = await env.DB.prepare(
         `SELECT COUNT(*) AS total_contracts,
           SUM(CASE WHEN participant_role = 'awardee' THEN 1 ELSE 0 END) AS awardee_contracts,
           SUM(CASE WHEN participant_role = 'competitor_confirmed' THEN 1 ELSE 0 END) AS competitor_contracts,
           SUM(CASE WHEN participant_role = 'awardee' THEN COALESCE(contract_value,0) ELSE 0 END) AS total_value,
           MAX(publication_date) AS latest_date
          FROM discovery_contracts WHERE ${where}`
-      ).bind(nif, fromDate).first();
+      ).bind(nif, fromDate).all();
+      const summary = summaryResult.results?.[0] || {};
       const history = await env.DB.prepare(
         `SELECT source_id, participant_role, publication_date, description, cpv, contracting_authority, contract_value, procedure_url
          FROM discovery_contracts WHERE ${where} ORDER BY publication_date DESC, source_id DESC LIMIT ? OFFSET ?`
