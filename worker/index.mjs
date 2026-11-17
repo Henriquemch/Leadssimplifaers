@@ -219,6 +219,13 @@ export default {
       return json({ ok: true, imported: inserts.length, skipped, companies_updated: companyUpdates.size });
     }
 
+    if (request.method === "GET" && url.pathname === "/api/potential-clients") {
+      const result = await env.DB.prepare(
+        "SELECT c.id, c.nif, c.name, c.sector, c.linkedin_company_url, c.lead_source, c.potential_client_at, dm.id AS decision_maker_id, dm.full_name, dm.job_title, dm.email, dm.phone, dm.professional_profile_url, dm.provider FROM companies c JOIN decision_makers dm ON dm.company_id = c.id AND dm.review_status = 'selected' WHERE c.potential_client_at IS NOT NULL ORDER BY c.potential_client_at DESC, c.name ASC LIMIT 300"
+      ).all();
+      return json({ ok: true, records: result.results || [] });
+    }
+
     if (request.method === "GET" && url.pathname === "/api/companies") {
       const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 50), 1), 100);
       const filters = [];
@@ -287,7 +294,7 @@ export default {
       if (!company) return json({ ok: false, error: "Company not found." }, 404);
       const notes = typeof body.notes === "string" ? body.notes.trim().slice(0, 1000) : null;
       await env.DB.batch([
-        env.DB.prepare("UPDATE companies SET qualification_status = ?, qualification_notes = ?, qualified_at = CASE WHEN ? = 'approved' THEN CURRENT_TIMESTAMP ELSE NULL END, commercial_status = CASE WHEN ? = 'approved' THEN commercial_status ELSE 'pending_review' END, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(body.status, notes, body.status, body.status, companyId),
+        env.DB.prepare("UPDATE companies SET qualification_status = ?, qualification_notes = ?, qualified_at = CASE WHEN ? = 'approved' THEN CURRENT_TIMESTAMP ELSE NULL END, commercial_status = CASE WHEN ? = 'approved' THEN commercial_status ELSE 'pending_review' END, potential_client_at = CASE WHEN ? = 'rejected' THEN NULL ELSE potential_client_at END, lead_source = CASE WHEN ? = 'rejected' THEN NULL ELSE lead_source END, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(body.status, notes, body.status, body.status, body.status, body.status, companyId),
         env.DB.prepare("INSERT INTO company_events (id, company_id, event_type, summary) VALUES (?, ?, 'qualification_changed', ?)").bind(id(), companyId, `Qualificação: ${company.qualification_status} → ${body.status}`)
       ]);
       return json({ ok: true, company_id: companyId, qualification_status: body.status });
