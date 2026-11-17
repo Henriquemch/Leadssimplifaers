@@ -296,7 +296,8 @@ export default {
       const notes = typeof body.notes === "string" ? body.notes.trim().slice(0, 1000) : null;
       await env.DB.batch([
         env.DB.prepare("UPDATE companies SET qualification_status = ?, qualification_notes = ?, qualified_at = CASE WHEN ? = 'approved' THEN CURRENT_TIMESTAMP ELSE NULL END, commercial_status = CASE WHEN ? = 'approved' THEN commercial_status ELSE 'pending_review' END, potential_client_at = CASE WHEN ? = 'rejected' THEN NULL ELSE potential_client_at END, lead_source = CASE WHEN ? = 'rejected' THEN NULL ELSE lead_source END, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(body.status, notes, body.status, body.status, body.status, body.status, companyId),
-        env.DB.prepare("INSERT INTO company_events (id, company_id, event_type, summary) VALUES (?, ?, 'qualification_changed', ?)").bind(id(), companyId, `Qualificação: ${company.qualification_status} → ${body.status}`)
+        env.DB.prepare("INSERT INTO company_events (id, company_id, event_type, summary) VALUES (?, ?, 'qualification_changed', ?)").bind(id(), companyId, `Qualificação: ${company.qualification_status} → ${body.status}`),
+        env.DB.prepare("UPDATE decision_makers SET review_status = 'pending' WHERE company_id = ? AND ? = 'rejected' AND review_status = 'selected'").bind(companyId, body.status)
       ]);
       return json({ ok: true, company_id: companyId, qualification_status: body.status });
     }
