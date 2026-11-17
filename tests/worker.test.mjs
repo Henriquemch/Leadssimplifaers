@@ -301,7 +301,7 @@ test("decision-maker research allowed only for explicitly eligible company", asy
   assert.equal(response.status, 201);
 });
 
-test("company evidence endpoint reads full discovery contract history", async () => {
+test("company evidence endpoint reads paginated 12/24-month discovery contract history", async () => {
   const queriedSql = [];
   let queryCount = 0;
   const localEnv = {
@@ -314,17 +314,18 @@ test("company evidence endpoint reads full discovery contract history", async ()
           bind(...values) {
             return {
               async all() {
-                if (current === 0) return { results: [{
-                  contract_count: 3, awardee_contract_count: 2, competitor_contract_count: 1,
-                  awarded_value_total: 12000, latest_contract_date: "2026-10-01",
-                  top_cpv_json: '[{"cpv":"45000000-7","contracts":2}]',
-                  top_authorities_json: '[{"contracting_authority":"Instituto Público","contracts":2}]'
+                if (current === 0) return { results: [{ id: "nif:501000000" }] };
+                if (current === 1) return { results: [{
+                  total_contracts: 3, awardee_contracts: 2, competitor_contracts: 1,
+                  total_value: 12000, latest_date: "2026-10-01"
                 }] };
-                return { results: [{
-                  source_id: "base-1", participant_role: "awardee", publication_date: "2026-10-01",
-                  description: "Serviços", cpv: "45000000-7", contracting_authority: "Instituto Público",
-                  contract_value: 4000, procedure_url: "https://www.base.gov.pt/"
-                }] };
+                if (current === 2) return { results: [
+                  { source_id: "base-1", participant_role: "awardee", publication_date: "2026-10-01", description: "Serviços A", cpv: "45000000-7", contracting_authority: "Instituto Público", contract_value: 4000, procedure_url: "https://www.base.gov.pt/" },
+                  { source_id: "base-2", participant_role: "awardee", publication_date: "2026-09-01", description: "Serviços B", cpv: "45000000-7", contracting_authority: "Instituto Público", contract_value: 8000, procedure_url: "https://www.base.gov.pt/" },
+                  { source_id: "base-3", participant_role: "competitor_confirmed", publication_date: "2026-08-01", description: "Serviços C", cpv: "45000000-7", contracting_authority: "Instituto Público", contract_value: null, procedure_url: "https://www.base.gov.pt/" }
+                ] };
+                if (current === 3) return { results: [{ cpv: "45000000-7", contracts: 3 }] };
+                return { results: [{ contracting_authority: "Instituto Público", contracts: 3 }] };
               }
             };
           }
@@ -332,21 +333,23 @@ test("company evidence endpoint reads full discovery contract history", async ()
       }
     }
   };
-  const response = await app.fetch(new Request("https://leadpilot.test/api/companies/c1/procurements?limit=500", {
+  const response = await app.fetch(new Request("https://leadpilot.test/api/companies/nif%3A501000000/procurements?months=12&limit=50&offset=0", {
     headers: { cookie: await adminCookie() }
   }), localEnv);
   assert.equal(response.status, 200);
   const data = await response.json();
+  assert.equal(data.months, 12);
   assert.equal(data.summary.total_contracts, 3);
   assert.equal(data.summary.awardee_contracts, 2);
   assert.equal(data.summary.total_value, 12000);
-  assert.equal(data.procurements.length, 1);
+  assert.equal(data.procurements.length, 3);
+  assert.equal(data.has_more, false);
   assert.equal(data.procurements[0].cpv, "45000000-7");
   assert.equal(data.top_cpv[0].cpv, "45000000-7");
   assert.equal(data.top_authorities[0].contracting_authority, "Instituto Público");
-  assert.ok(queriedSql[1].includes("FROM discovery_contracts"));
+  assert.ok(queriedSql[2].includes("FROM discovery_contracts"));
+  assert.ok(queriedSql[2].includes("LIMIT ? OFFSET ?"));
 });
-
 test("company search accepts bounded filters", async () => {
   const response = await app.fetch(new Request("https://leadpilot.test/api/companies?q=construcao&qualification_status=approved&commercial_status=eligible", {
     headers: { cookie: await adminCookie() }
