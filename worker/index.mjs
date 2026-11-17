@@ -187,6 +187,38 @@ export default {
       return json({ ok: true, nif, registry_preserved: true });
     }
 
+    if (request.method === "POST" && url.pathname === "/api/sabi/import") {
+      const body = await request.json().catch(() => null);
+      if (!body || !Array.isArray(body.records) || body.records.length > 200) return json({ ok: false, error: "Importa até 200 registos SABI de cada vez." }, 400);
+      const inserts = [];
+      const companyUpdates = new Set();
+      let skipped = 0;
+      for (const item of body.records) {
+        const nif = typeof item?.nif === "string" ? item.nif.replace(/[^0-9]/g, "") : "";
+        const fullName = typeof item?.full_name === "string" ? item.full_name.trim() : "";
+        if (!/^\d{9}$/.test(nif) || !fullName) { skipped++; continue; }
+        const found = await env.DB.prepare("SELECT id, qualification_status FROM companies WHERE nif = ? LIMIT 1").bind(nif).first();
+        if (!found || found.qualification_status !== "approved") { skipped++; continue; }
+        const title = typeof item.job_title === "string" ? item.job_title.trim().slice(0, 120) : "";
+        const duplicate = await env.DB.prepare("SELECT id FROM decision_makers WHERE company_id = ? AND full_name = ? AND COALESCE(job_title,'') = ? AND provider = 'SABI' LIMIT 1")
+          .bind(found.id, fullName.slice(0, 160), title).first();
+        if (duplicate) { skipped++; continue; }
+        inserts.push(env.DB.prepare("INSERT INTO decision_makers (id, company_id, full_name, job_title, email, phone, contact_type, review_status, notes, professional_profile_url, source_url, provider) VALUES (?, ?, ?, ?, ?, ?, 'decision_maker', 'pending', ?, ?, ?, 'SABI')")
+          .bind(id(), found.id, fullName.slice(0, 160), title || null,
+            typeof item.email === "string" ? item.email.trim().slice(0, 200) : null,
+            typeof item.phone === "string" ? item.phone.trim().slice(0, 60) : null,
+            typeof item.notes === "string" ? item.notes.trim().slice(0, 1000) : "Importado do SABI; aguarda validação manual.",
+            typeof item.profile_url === "string" ? item.profile_url.trim().slice(0, 500) : null,
+            typeof item.source_url === "string" ? item.source_url.trim().slice(0, 500) : null));
+        companyUpdates.add(found.id);
+      }
+      if (inserts.length) {
+        const updates = [...companyUpdates].map(companyId => env.DB.prepare("UPDATE companies SET contact_research_status = 'sabi_imported', updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(companyId));
+        await env.DB.batch([...inserts, ...updates]);
+      }
+      return json({ ok: true, imported: inserts.length, skipped, companies_updated: companyUpdates.size });
+    }
+
     if (request.method === "GET" && url.pathname === "/api/companies") {
       const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 50), 1), 100);
       const filters = [];
@@ -211,7 +243,7 @@ export default {
       }
       const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
       const result = await env.DB.prepare(
-        `SELECT id, nif, name, municipality, district, sector, evidence_type, qualification_status, qualification_notes, customer_status, contacted_status, active_process_status, commercial_notes, commercial_status, source_url, last_seen_at FROM companies ${where} ORDER BY last_seen_at DESC LIMIT ?`
+        `SELECT id, nif, name, municipality, district, sector, evidence_type, qualification_status, qualification_notes, customer_status, contacted_status, active_process_status, commercial_notes, commercial_status, source_url, last_seen_at, linkedin_company_url, linkedin_status, contact_research_status, lead_source, potential_client_at FROM companies ${where} ORDER BY last_seen_at DESC LIMIT ?`
       ).bind(...values, limit).all();
       return json({ ok: true, companies: result.results || [] });
     }
@@ -261,6 +293,38 @@ export default {
       return json({ ok: true, company_id: companyId, qualification_status: body.status });
     }
 
+    const linkedinMatch = url.pathname.match(/^\/api\/companies\/([^/]+)\/linkedin$/);
+    if (request.method === "PATCH" && linkedinMatch) {
+      const companyId = decodeURIComponent(linkedinMatch[1]);
+      const body = await request.json().catch(() => null);
+      const status = body?.status;
+      if (!["found", "not_found"].includes(status)) return json({ ok: false, error: "Estado LinkedIn inválido." }, 400);
+      let profileUrl = null;
+      if (status === "found") {
+        if (typeof body.url !== "string" || !body.url.trim()) return json({ ok: false, error: "Indica o URL da página da empresa no LinkedIn." }, 400);
+        try {
+          const parsed = new URL(body.url.trim());
+          if (!/(^|\.)linkedin\.com$/i.test(parsed.hostname) || !/^\/company\//.test(parsed.pathname)) throw new Error("invalid");
+          profileUrl = parsed.toString().slice(0, 500);
+        } catch { return json({ ok: false, error: "O URL deve ser uma página /company/ do LinkedIn." }, 400); }
+      }
+      const company = await companyById(env.DB, companyId);
+      if (!company) return json({ ok: false, error: "Empresa não encontrada." }, 404);
+      await env.DB.prepare("UPDATE companies SET linkedin_company_url = ?, linkedin_status = ?, contact_research_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+        .bind(profileUrl, status, status === "found" ? "linkedin_pending" : "sabi_pending", companyId).run();
+      return json({ ok: true, company_id: companyId, linkedin_status: status, contact_research_status: status === "found" ? "linkedin_pending" : "sabi_pending" });
+    }
+
+    const sabiQueueMatch = url.pathname.match(/^\/api\/companies\/([^/]+)\/sabi-queue$/);
+    if (request.method === "POST" && sabiQueueMatch) {
+      const companyId = decodeURIComponent(sabiQueueMatch[1]);
+      const company = await companyById(env.DB, companyId);
+      if (!company) return json({ ok: false, error: "Empresa não encontrada." }, 404);
+      await env.DB.prepare("UPDATE companies SET linkedin_status = CASE WHEN linkedin_status = 'found' THEN linkedin_status ELSE 'not_found' END, contact_research_status = 'sabi_pending', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+        .bind(companyId).run();
+      return json({ ok: true, company_id: companyId, contact_research_status: "sabi_pending" });
+    }
+
     const commercialMatch = url.pathname.match(/^\/api\/companies\/([^/]+)\/commercial-check$/);
     if (request.method === "PATCH" && commercialMatch) {
       const companyId = decodeURIComponent(commercialMatch[1]);
@@ -308,9 +372,8 @@ export default {
       }
       const company = await companyById(env.DB, body.company_id);
       if (!company) return json({ ok: false, error: "Company not found." }, 404);
-      if (company.qualification_status !== "approved" || company.commercial_status !== "eligible" ||
-          company.customer_status !== "no" || company.active_process_status !== "no") {
-        return json({ ok: false, error: "Decision-maker research is blocked until the company is explicitly eligible for prospecting." }, 409);
+      if (company.qualification_status !== "approved") {
+        return json({ ok: false, error: "A empresa tem de estar aprovada na identificação antes de registar decisores." }, 409);
       }
       const contactType = ["general", "decision_maker"].includes(body.contact_type) ? body.contact_type : "decision_maker";
       const reviewStatus = ["pending", "selected", "rejected"].includes(body.review_status) ? body.review_status : "pending";
@@ -334,9 +397,25 @@ export default {
       if (!["pending", "selected", "rejected"].includes(body?.review_status)) {
         return json({ ok: false, error: "Estado de seleção inválido." }, 400);
       }
-      await env.DB.prepare("UPDATE decision_makers SET review_status = ?, notes = COALESCE(?, notes) WHERE id = ?")
-        .bind(body.review_status, typeof body.notes === "string" ? body.notes.trim().slice(0, 1000) : null, personStatusMatch[1]).run();
-      return json({ ok: true, decision_maker_id: personStatusMatch[1], review_status: body.review_status });
+      const person = await env.DB.prepare("SELECT company_id, provider FROM decision_makers WHERE id = ? LIMIT 1").bind(personStatusMatch[1]).first();
+      if (!person) return json({ ok: false, error: "Decisor não encontrado." }, 404);
+      if (body.review_status === "selected") {
+        const company = await env.DB.prepare("SELECT qualification_status FROM companies WHERE id = ? LIMIT 1").bind(person.company_id).first();
+        if (!company || company.qualification_status !== "approved") return json({ ok: false, error: "A empresa tem de estar aprovada antes de promover um decisor." }, 409);
+        const source = String(person.provider || "").toLowerCase().includes("sabi") ? "sabi" : "linkedin";
+        await env.DB.batch([
+          env.DB.prepare("UPDATE decision_makers SET review_status = ?, notes = COALESCE(?, notes) WHERE id = ?")
+            .bind(body.review_status, typeof body.notes === "string" ? body.notes.trim().slice(0, 1000) : null, personStatusMatch[1]),
+          env.DB.prepare("UPDATE companies SET contact_research_status = 'decision_maker_found', lead_source = ?, potential_client_at = COALESCE(potential_client_at, CURRENT_TIMESTAMP), updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+            .bind(source, person.company_id),
+          env.DB.prepare("INSERT INTO company_events (id, company_id, event_type, summary) VALUES (?, ?, 'commercial_status_changed', ?)")
+            .bind(id(), person.company_id, "Empresa promovida a Potenciais clientes após validação de decisor.")
+        ]);
+      } else {
+        await env.DB.prepare("UPDATE decision_makers SET review_status = ?, notes = COALESCE(?, notes) WHERE id = ?")
+          .bind(body.review_status, typeof body.notes === "string" ? body.notes.trim().slice(0, 1000) : null, personStatusMatch[1]).run();
+      }
+      return json({ ok: true, decision_maker_id: personStatusMatch[1], review_status: body.review_status, promoted: body.review_status === "selected" });
     }
 
     if (request.method === "GET" && url.pathname === "/internal/import/stats") {
