@@ -283,13 +283,13 @@ test("current customers are automatically marked not_contact", async () => {
   assert.equal((await response.json()).commercial_status, "not_contact");
 });
 
-test("decision-maker research is blocked unless company is eligible", async () => {
+test("decision-maker research is allowed after qualification without a Dynamics gate", async () => {
   const response = await app.fetch(new Request("https://leadpilot.test/api/decision-makers", {
     method: "POST",
     headers: { cookie: await adminCookie(), origin: env.APP_ORIGIN, "content-type": "application/json" },
     body: JSON.stringify({ company_id: "c1", full_name: "Pessoa Teste" })
-  }), envWithCompany({ id: "c1", qualification_status: "approved", commercial_status: "pending_review", customer_status: "no", active_process_status: "no" }));
-  assert.equal(response.status, 409);
+  }), envWithCompany({ id: "c1", qualification_status: "approved", commercial_status: "pending_review", customer_status: "unknown", active_process_status: "unknown" }));
+  assert.equal(response.status, 201);
 });
 
 test("decision-maker research allowed only for explicitly eligible company", async () => {
@@ -360,4 +360,80 @@ test("company search rejects invalid workflow filters", async () => {
     headers: { cookie: await adminCookie() }
   }), env);
   assert.equal(response.status, 400);
+});
+
+
+test("LinkedIn company URL is stored only for a valid company profile URL", async () => {
+  const cookie = await adminCookie();
+  const localEnv = envWithCompany({ id: "c1", qualification_status: "approved" });
+  const good = await app.fetch(new Request("https://leadpilot.test/api/companies/c1/linkedin", {
+    method: "PATCH", headers: { cookie, origin: env.APP_ORIGIN, "content-type": "application/json" },
+    body: JSON.stringify({ status: "found", url: "https://www.linkedin.com/company/example/" })
+  }), localEnv);
+  assert.equal(good.status, 200);
+  const bad = await app.fetch(new Request("https://leadpilot.test/api/companies/c1/linkedin", {
+    method: "PATCH", headers: { cookie, origin: env.APP_ORIGIN, "content-type": "application/json" },
+    body: JSON.stringify({ status: "found", url: "https://example.com/company/example" })
+  }), localEnv);
+  assert.equal(bad.status, 400);
+});
+
+test("SABI import accepts pending decision-maker records for approved companies", async () => {
+  let batchSizes = [];
+  const localEnv = {
+    ...env,
+    DB: {
+      prepare(sql) {
+        return { bind(...values) {
+          return {
+            async first() {
+              if (sql.includes("FROM companies")) return { id: "c1", qualification_status: "approved" };
+              if (sql.includes("FROM decision_makers")) return null;
+              return null;
+            },
+            async run() { return { success: true }; },
+            async all() { return { results: [] }; }
+          };
+        } };
+      },
+      async batch(statements) { batchSizes.push(statements.length); return statements.map(() => ({ success: true })); }
+    }
+  };
+  const response = await app.fetch(new Request("https://leadpilot.test/api/sabi/import", {
+    method: "POST", headers: { cookie: await adminCookie(), origin: env.APP_ORIGIN, "content-type": "application/json" },
+    body: JSON.stringify({ records: [{ nif: "501000000", full_name: "Gestor Teste", job_title: "Administrador" }] })
+  }), localEnv);
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).imported, 1);
+  assert.deepEqual(batchSizes, [1, 1]);
+});
+
+test("validating a decision-maker promotes the company to potential clients", async () => {
+  let batchSize = 0;
+  const localEnv = {
+    ...env,
+    DB: {
+      prepare(sql) {
+        return { bind(...values) {
+          return {
+            async first() {
+              if (sql.includes("FROM decision_makers")) return { company_id: "c1", provider: "SABI" };
+              if (sql.includes("FROM companies")) return { qualification_status: "approved" };
+              return null;
+            },
+            async all() { return { results: [] }; },
+            async run() { return { success: true }; }
+          };
+        } };
+      },
+      async batch(statements) { batchSize = statements.length; return statements.map(() => ({ success: true })); }
+    }
+  };
+  const response = await app.fetch(new Request("https://leadpilot.test/api/decision-makers/abc123/review", {
+    method: "PATCH", headers: { cookie: await adminCookie(), origin: env.APP_ORIGIN, "content-type": "application/json" },
+    body: JSON.stringify({ review_status: "selected" })
+  }), localEnv);
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).promoted, true);
+  assert.equal(batchSize, 3);
 });
