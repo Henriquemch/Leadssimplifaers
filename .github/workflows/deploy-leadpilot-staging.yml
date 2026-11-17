@@ -11,6 +11,12 @@ on:
       - "wrangler.toml"
       - ".github/workflows/deploy-leadpilot-staging.yml"
   workflow_dispatch:
+    inputs:
+      apply_migrations:
+        description: 'Aplicar migrações D1 (apenas quando necessário e validado)'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -45,6 +51,7 @@ jobs:
           wrangler whoami
 
       - name: Apply D1 migrations to the staging database
+        if: github.event_name == 'workflow_dispatch' && inputs.apply_migrations == true
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
