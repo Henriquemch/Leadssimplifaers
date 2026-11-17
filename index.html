@@ -37,7 +37,7 @@ async function api(path,options={}){const r=await fetch(API+path,{credentials:"s
 function showStatus(message,kind="status"){const el=$("globalStatus");el.className=kind;el.textContent=message}
 function selectCompany(id){state.selected=state.companies.find(c=>c.id===id)||null;renderIdentification()}
 function companyTitle(c){return esc(c.name)+(c.nif?" · NIF "+esc(c.nif):"")}
-async function loadCompanies(){const d=await api("/api/companies?limit=100");state.companies=d.companies||[];$("companyCount").textContent=state.companies.length;if(state.selected)state.selected=state.companies.find(c=>c.id===state.selected.id)||null;renderSavedCompanies();renderSabiQueue();renderRejected();await renderPotentialClients();if(state.selected)renderIdentification()}
+async function loadCompanies(){const d=await api("/api/companies?limit=500");state.companies=d.companies||[];$("companyCount").textContent=state.companies.length;if(state.selected)state.selected=state.companies.find(c=>c.id===state.selected.id)||null;renderSavedCompanies();renderSabiQueue();renderRejected();await renderPotentialClients();if(state.selected)renderIdentification()}
 function renderSavedCompanies(){
  const root=$("savedCompaniesList");if(!root)return;
  const rows=state.companies.filter(c=>c.qualification_status!=="rejected"&&!c.potential_client_at).sort((a,b)=>(a.qualification_status==="approved"?-1:0)-(b.qualification_status==="approved"?-1:0)||String(b.last_seen_at||"").localeCompare(String(a.last_seen_at||"")));
