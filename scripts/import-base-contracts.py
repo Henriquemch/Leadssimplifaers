@@ -210,7 +210,7 @@ def empty_profile(company):
         "evidence_type": company["evidence_type"], "source_url": company["source_url"],
         "contract_count": 0, "awardee_contract_count": 0, "competitor_contract_count": 0,
         "awarded_value_total": 0.0, "latest_contract_date": None,
-        "_cpv": {}, "_authorities": {}, "_recent": [],
+        "_cpv": {}, "_authorities": {}, "_recent": [], "_seen": set(),
     }
 
 
@@ -225,6 +225,12 @@ def add_profile_record(profiles, record):
         profile["evidence_type"] = "awardee"
 
     role = procurement["participant_role"]
+    # One company can only contribute once per source contract, even if an archive
+    # contains repeated rows or a resource is republished.
+    dedupe_key = procurement["source_id"]
+    if dedupe_key in profile["_seen"]:
+        return
+    profile["_seen"].add(dedupe_key)
     profile["contract_count"] += 1
     if role == "awardee":
         profile["awardee_contract_count"] += 1
@@ -283,24 +289,34 @@ def main():  # bounded staging import trial
         raise SystemExit("Manifesto sem a fonte oficial BASE de contratos.")
     today = date.today()
     try:
-        cutoff = today.replace(year=today.year - 5)
-    except ValueError:  # 29 February → 28 February five years earlier
-        cutoff = today.replace(year=today.year - 5, day=28)
+        cutoff = today.replace(year=today.year - 2)
+    except ValueError:  # 29 February → 28 February two years earlier
+        cutoff = today.replace(year=today.year - 2, day=28)
     dry_run = os.getenv("LEADPILOT_DRY_RUN", "true").lower() != "false"
     worker_url = os.getenv("LEADPILOT_WORKER_URL", "")
     secret = os.getenv("INGEST_SECRET", "")
     if not dry_run and (not worker_url.startswith("https://") or not secret):
         raise SystemExit("Importação real exige LEADPILOT_WORKER_URL HTTPS e INGEST_SECRET.")
 
-    resources = []
+    # The official manifest publishes duplicate annual archives (ZIP and XLSX).
+    # Prefer the XLSX resource once per year to avoid processing the same contracts twice.
+    resources_by_year = {}
     for resource in source.get("resources", []):
         title = resource.get("title") or ""
         match = RESOURCE_YEAR_RE.search(title)
-        if match and resource.get("url") and int(match.group(1)) >= cutoff.year:
-            resources.append((int(match.group(1)), resource))
+        if not (match and resource.get("url")):
+            continue
+        year = int(match.group(1))
+        if year < cutoff.year:
+            continue
+        current = resources_by_year.get(year)
+        priority = 0 if str(resource.get("format", "")).lower() == "xlsx" or title.lower().endswith(".xlsx") else 1
+        current_priority = 0 if current and (str(current.get("format", "")).lower() == "xlsx" or (current.get("title") or "").lower().endswith(".xlsx")) else 1
+        if current is None or priority < current_priority:
+            resources_by_year[year] = resource
+    resources = sorted(resources_by_year.items())
     if not resources:
-        raise SystemExit("Não foram encontrados arquivos anuais contratos2021–2026 no manifesto.")
-    resources.sort(key=lambda item: item[0])
+        raise SystemExit("Não foram encontrados ficheiros anuais BASE para a janela móvel de 24 meses.")
 
     max_records = int(os.getenv("LEADPILOT_MAX_RECORDS", "0") or "0")
     if max_records < 0:

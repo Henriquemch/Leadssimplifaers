@@ -259,29 +259,39 @@ export default {
     const procurementMatch = url.pathname.match(/^\/api\/companies\/([^/]+)\/procurements$/);
     if (request.method === "GET" && procurementMatch) {
       const companyId = decodeURIComponent(procurementMatch[1]);
-      const result = await env.DB.prepare(
-        "SELECT contract_count, awardee_contract_count, competitor_contract_count, awarded_value_total, latest_contract_date, top_cpv_json, top_authorities_json FROM companies WHERE id = ? LIMIT 1"
-      ).bind(companyId).all();
-      const profile = result.results?.[0];
-      if (!profile) return json({ ok: false, error: "Company not found." }, 404);
+      const exists = await env.DB.prepare("SELECT id FROM companies WHERE id = ? LIMIT 1").bind(companyId).all();
+      if (!exists.results?.length) return json({ ok: false, error: "Company not found." }, 404);
       const nif = companyId.startsWith("nif:") ? companyId.slice(4) : "";
+      const months = Number(url.searchParams.get("months") || 12);
+      if (![12, 24].includes(months)) return json({ ok: false, error: "months must be 12 or 24." }, 400);
+      const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 50), 1), 100);
+      const offset = Math.min(Math.max(Number(url.searchParams.get("offset") || 0), 0), 10000);
+      const since = new Date(); since.setMonth(since.getMonth() - months);
+      const fromDate = since.toISOString().slice(0, 10);
+      const where = "nif = ? AND publication_date >= ?";
+      const summaryResult = await env.DB.prepare(
+        `SELECT COUNT(*) AS total_contracts,
+          SUM(CASE WHEN participant_role = 'awardee' THEN 1 ELSE 0 END) AS awardee_contracts,
+          SUM(CASE WHEN participant_role = 'competitor_confirmed' THEN 1 ELSE 0 END) AS competitor_contracts,
+          SUM(CASE WHEN participant_role = 'awardee' THEN COALESCE(contract_value,0) ELSE 0 END) AS total_value,
+          MAX(publication_date) AS latest_date
+         FROM discovery_contracts WHERE ${where}`
+      ).bind(nif, fromDate).all();
+      const summary = summaryResult.results?.[0] || {};
       const history = await env.DB.prepare(
-        "SELECT source_id, participant_role, publication_date, description, cpv, contracting_authority, contract_value, procedure_url FROM discovery_contracts WHERE nif = ? ORDER BY publication_date DESC LIMIT 500"
-      ).bind(nif).all();
-      const parseArray = (value) => { try { const parsed = JSON.parse(value || "[]"); return Array.isArray(parsed) ? parsed : []; } catch { return []; } };
-      return json({
-        ok: true,
-        summary: {
-          total_contracts: Number(profile.contract_count || 0),
-          awardee_contracts: Number(profile.awardee_contract_count || 0),
-          competitor_contracts: Number(profile.competitor_contract_count || 0),
-          total_value: Number(profile.awarded_value_total || 0),
-          latest_date: profile.latest_contract_date || null
-        },
-        procurements: history.results || [],
-        top_cpv: parseArray(profile.top_cpv_json),
-        top_authorities: parseArray(profile.top_authorities_json)
-      });
+        `SELECT source_id, participant_role, publication_date, description, cpv, contracting_authority, contract_value, procedure_url
+         FROM discovery_contracts WHERE ${where} ORDER BY publication_date DESC, source_id DESC LIMIT ? OFFSET ?`
+      ).bind(nif, fromDate, limit, offset).all();
+      const cpvs = await env.DB.prepare(
+        `SELECT cpv, COUNT(*) AS contracts FROM discovery_contracts WHERE ${where} AND cpv IS NOT NULL AND cpv != '' GROUP BY cpv ORDER BY contracts DESC LIMIT 8`
+      ).bind(nif, fromDate).all();
+      const authorities = await env.DB.prepare(
+        `SELECT contracting_authority, COUNT(*) AS contracts FROM discovery_contracts WHERE ${where} AND contracting_authority IS NOT NULL AND contracting_authority != '' GROUP BY contracting_authority ORDER BY contracts DESC LIMIT 8`
+      ).bind(nif, fromDate).all();
+      const total = Number(summary?.total_contracts || 0);
+      return json({ ok: true, months, from_date: fromDate, limit, offset, total, has_more: offset + (history.results || []).length < total,
+        summary: { total_contracts: total, awardee_contracts: Number(summary?.awardee_contracts || 0), competitor_contracts: Number(summary?.competitor_contracts || 0), total_value: Number(summary?.total_value || 0), latest_date: summary?.latest_date || null },
+        procurements: history.results || [], top_cpv: cpvs.results || [], top_authorities: authorities.results || [] });
     }
 
     const qualificationMatch = url.pathname.match(/^\/api\/companies\/([^/]+)\/qualification$/);
