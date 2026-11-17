@@ -24,7 +24,7 @@ test("frontend contains the four approved workflow tabs and no browser admin tok
   }
   assert.match(html, /copySabiNifs/);
   assert.match(html, /importSabiCsv/);
-  assert.doesNotMatch(html, /app\\.apollo\\.io|app\\.lusha\\.com/);
+  assert.doesNotMatch(html, /app\.apollo\.io|app\.lusha\.com/);
   assert.doesNotMatch(html, /ADMIN_TOKEN|INGEST_SECRET|SESSION_SECRET/);
   const scriptStart = html.indexOf("<script>") + "<script>".length;
   const scriptEnd = html.indexOf("</script>", scriptStart);
