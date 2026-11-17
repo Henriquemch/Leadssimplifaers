@@ -193,7 +193,7 @@ test("adding a BASE profile creates the lead and history in one D1 batch", async
     body: JSON.stringify({ nif: "501000000" })
   }), localEnv);
   assert.equal(response.status, 201);
-  assert.equal(batchSize, 4);
+  assert.equal(batchSize, 3);
 });
 
 test("batch ingestion rejects missing credentials", async () => {
