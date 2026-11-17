@@ -49,3 +49,8 @@ Não utilizar Supabase. Não adicionar subscrições pagas nem consumir APIs pag
 ## Segurança
 
 Nunca colocar passwords, API keys, tokens ou segredos no GitHub ou no frontend. Manter segredos no ambiente do Worker/Netlify. Não ativar a aplicação pública antes de validar autenticação, proxy, D1 e migrações em staging.
+
+
+## Netlify preview refresh
+
+Refresh the Deploy Preview for validating the current LeadPilot staging interface. No production files or settings are changed.
