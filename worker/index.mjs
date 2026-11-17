@@ -409,16 +409,18 @@ export default {
       const person = await env.DB.prepare("SELECT company_id, provider FROM decision_makers WHERE id = ? LIMIT 1").bind(personStatusMatch[1]).first();
       if (!person) return json({ ok: false, error: "Decisor não encontrado." }, 404);
       if (body.review_status === "selected") {
-        const company = await env.DB.prepare("SELECT qualification_status FROM companies WHERE id = ? LIMIT 1").bind(person.company_id).first();
+        const company = await env.DB.prepare("SELECT qualification_status, potential_client_at FROM companies WHERE id = ? LIMIT 1").bind(person.company_id).first();
         if (!company || company.qualification_status !== "approved") return json({ ok: false, error: "A empresa tem de estar aprovada antes de promover um decisor." }, 409);
         const source = String(person.provider || "").toLowerCase().includes("sabi") ? "sabi" : "linkedin";
         await env.DB.batch([
           env.DB.prepare("UPDATE decision_makers SET review_status = ?, notes = COALESCE(?, notes) WHERE id = ?")
             .bind(body.review_status, typeof body.notes === "string" ? body.notes.trim().slice(0, 1000) : null, personStatusMatch[1]),
-          env.DB.prepare("UPDATE companies SET contact_research_status = 'decision_maker_found', lead_source = ?, potential_client_at = COALESCE(potential_client_at, CURRENT_TIMESTAMP), updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+          env.DB.prepare("UPDATE companies SET contact_research_status = 'decision_maker_found', lead_source = COALESCE(lead_source, ?), potential_client_at = COALESCE(potential_client_at, CURRENT_TIMESTAMP), updated_at = CURRENT_TIMESTAMP WHERE id = ?")
             .bind(source, person.company_id),
-          env.DB.prepare("INSERT INTO company_events (id, company_id, event_type, summary) VALUES (?, ?, 'commercial_status_changed', ?)")
-            .bind(id(), person.company_id, "Empresa promovida a Potenciais clientes após validação de decisor.")
+          ...(company.potential_client_at ? [] : [
+            env.DB.prepare("INSERT INTO company_events (id, company_id, event_type, summary) VALUES (?, ?, 'commercial_status_changed', ?)")
+              .bind(id(), person.company_id, "Empresa promovida a Potenciais clientes após validação de decisor.")
+          ])
         ]);
       } else {
         await env.DB.prepare("UPDATE decision_makers SET review_status = ?, notes = COALESCE(?, notes) WHERE id = ?")
