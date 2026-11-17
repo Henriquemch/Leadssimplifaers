@@ -2,6 +2,7 @@
 """Incremental, minimal-field importer for official BASE contract archives."""
 import ast
 import json
+import math
 import os
 import re
 import sys
@@ -144,7 +145,9 @@ def normalized_records(row, cutoff):
     amount = row.get("precoContratual")
     try:
         amount = float(amount) if amount not in (None, "") else None
-    except (ValueError, TypeError):
+        if amount is not None and (not math.isfinite(amount) or amount < 0):
+            amount = None
+    except (ValueError, TypeError, OverflowError):
         amount = None
     procedure_url = pick(row, "linkPecasProc")
     output = []
