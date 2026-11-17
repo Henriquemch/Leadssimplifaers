@@ -1,76 +1,86 @@
-# Cloudflare D1 + Workers — migration foundation
+# LeadPilot — Cloudflare staging and workflow notes
 
-This is a **parallel staging migration branch**. It does not change the live Netlify site or the `main` branch.
+## Environment and safety
 
-## Current infrastructure state
+This remains a parallel staging implementation. Do not merge into `main` or change the production Netlify site without explicit approval.
 
-- Cloudflare D1 database `leadpilot` has been created manually by the account owner.
-- D1 database ID: `fcea37de-694c-4bc2-ad72-4b70c8e21740`.
-- Seven D1 migrations have been applied successfully. The API health endpoint confirms that the Worker can see its D1 binding. No BASE records have been imported.
-- The staging Worker `leadpilot-api-dev` has been deployed successfully at `https://leadpilot-api-dev.henriquemvm98.workers.dev`. Its `/health` endpoint returns `ok: true` and `database_configured: true`. No application authentication secrets have been configured yet.
-- `wrangler.toml` targets a staging Worker named `leadpilot-api-dev`, with `APP_ENV = "staging"`, and binds the existing D1 database as `DB`.
-- The production Netlify site and `main` branch remain untouched.
+- Frontend: Netlify static site.
+- API: Cloudflare Worker `leadpilot-api-dev`.
+- Database: Cloudflare D1 `leadpilot`.
+- Netlify proxies `/api/leadpilot/*` to the Worker through `netlify/functions/leadpilot.mjs`.
+- Secrets stay in Cloudflare Worker / Netlify environment settings and must never be committed.
 
-## Architecture
+The prior infrastructure checkpoint confirmed the staging Worker health endpoint and D1 binding. The earlier checkpoint reported seven migrations applied. This branch now contains migrations 0008, 0009 and 0010 as well; verify the remote D1 migration list before applying anything. Do not assume migrations 0008–0010 have already been applied.
 
-- Netlify hosts the static dashboard and proxies `/.netlify/functions/leadpilot/*`.
-- The Cloudflare Worker is the API entry point.
-- Cloudflare D1 stores compact company profiles and the manually admitted lead/CRM workflow.
-- GitHub Actions downloads and parses official BASE datasets; it sends compact, idempotent batches only after the Worker is configured and a real import is explicitly authorized.
-- The current import scope is a rolling 12-month window.
+## Current data model
 
-## Important files
+- `discovery_profiles`: compact company discovery profile, separate from the commercial pipeline.
+- `discovery_contracts`: normalized contract evidence associated with a company NIF.
+- `companies`: companies admitted to LeadPilot and their qualification/commercial workflow.
+- `decision_makers`: contacts and managers found through LinkedIn or imported from SABI.
+- `lead_registry`: permanent NIF/name identity registry to prevent duplicate discovery.
+- `lead_exclusions`: administrative exclusions.
+- `company_events`: compact audit history.
 
-- `migrations/`: D1 schema and incremental migrations, including compact discovery profiles and lead exclusions.
-- `worker/index.mjs`: authenticated API, discovery search, manual lead admission, exclusion management and protected BASE import endpoint.
-- `scripts/import-base-contracts.py` and `scripts/profile-contract-data.py`: BASE parsing and compact profile aggregation.
-- `.github/workflows/test-parser.yml`: parser, migration and frontend syntax checks.
-- `.github/workflows/import-base-contracts.yml`: import workflow; push-triggered runs are forced into dry-run mode.
-- `netlify/functions/leadpilot.mjs`: same-origin Netlify proxy. It requires `LEADPILOT_WORKER_URL` before it forwards requests.
+Migrations 0001–0010 are incremental. Migration 0010 adds LinkedIn page/status, SABI research status, potential-client promotion fields and the decision-maker fields used by the API.
 
-## Data minimization and admission rules
+## Approved four-tab workflow
 
-- BASE discovery profiles are separate from admitted leads.
-- Search results do not automatically become CRM leads. A user must explicitly choose **Adicionar ao LeadPilot**.
-- Profiles contain company identity, aggregate participation/awardee counts, awarded-value totals, latest contract date, top CPVs/authorities and a small number of recent evidence references.
-- No raw ZIP archives, complete contract rows or full source payloads are stored in D1.
-- The current search CPV filter matches the stored top-five CPV profile exactly; it does not search every historical CPV.
-- Existing leads and active exclusion records are suppressed from discovery results.
-- Exclusion reasons include current customer, active process, do not contact, duplicate, other and manual.
-- Decision-maker research remains a later, explicit qualification step. No automatic CRM/Dynamics submission is implemented.
+1. **Pesquisa** — BASE discovery, with a maximum of 30 results per page.
+2. **Identificação** — objective procurement evidence; manual approval/rejection; LinkedIn-first decision-maker research; SABI fallback for companies without an identified decision-maker.
+3. **Potenciais clientes** — a company appears after at least one decision-maker is manually validated.
+4. **Rejeitados** — rejected companies remain archived and can be requalified.
 
-## Validation already completed
+No weighted score or artificial qualification score is used. The application displays contract facts such as counts, awarded values, dates, CPVs, authorities and historical evolution.
 
-- Rolling 12-month dry-run cutoff: 2025-11-13.
-- Source archives processed: 4.
-- Source rows seen: 913,078.
-- Rows in the 12-month window: 425,496.
-- Companies profiled: 36,002.
-- Company participations aggregated: 662,478.
-- Estimated import batches: 721.
-- Compact JSON transfer payload: 50,166,314 bytes (about 50.2 MB); this is **not** a measurement of final D1 storage or billing.
-- Latest parser/Worker/frontend CI run passed on commit `f436c029da6eebe44a093dd430ca1b001d51f627`.
-- Staging deployment workflow completed successfully; seven D1 migrations were applied and the Worker was deployed.
-- Live `/health` test returned `{\"ok\":true,\"service\":\"leadpilot-api\",\"database_configured\":true}`.
-- Live unauthenticated `/api/discovery/search` test returned HTTP 401 `Unauthorized`, confirming API protection.
+### LinkedIn behavior
 
-## Secrets and environment
+The UI generates company/person search URLs using the company name. The user confirms the official company page, pastes its direct URL and records the decision-maker. The application does not scrape LinkedIn, bypass login or collect private profile data.
 
-Do not commit secrets or paste them into chat. Before enabling the staging Worker, configure these as Worker secrets:
+### SABI behavior
 
+- Mark companies without an identified LinkedIn decision-maker as `sabi_pending`.
+- Copy all pending company NIFs in bulk.
+- Export the SABI results as CSV with one person per row and a company NIF.
+- Import CSV into LeadPilot; imported decision-makers remain pending.
+- Manually validate a decision-maker to promote the company to Potenciais clientes.
+
+No SABI API connection is implemented.
+
+## BASE data window and import
+
+The approved historical scope is a rolling five-year window. The importer in `scripts/import-base-contracts.py` uses a five-year cutoff and the discovery UI defaults to five years.
+
+The public datasets are updated according to the source publisher's release schedule; the current importer downloads the published datasets. This is not a guaranteed real-time transactional BASE.gov API connection.
+
+The previous parser dry-run statistics were produced for an earlier 12-month test window and must not be represented as a five-year import. No real BASE import has been run as part of this feature branch.
+
+Before any real import:
+1. Verify the source manifest and current official resource URLs.
+2. Run a five-year dry-run and inspect counts/storage estimates.
+3. Obtain explicit approval before setting `LEADPILOT_DRY_RUN=false`.
+4. Start with a bounded test import and measure D1 storage.
+5. Never upgrade a paid plan or incur charges without explicit approval.
+
+## Secrets and deployment
+
+Worker secrets required for staging:
 - `ADMIN_PASSWORD`
-- `SESSION_SECRET` (at least 32 characters)
+- `SESSION_SECRET` (at least 32 random characters)
 - `INGEST_SECRET`
 
-Configure `APP_ORIGIN` as a normal Worker environment variable using the exact Netlify **preview** origin during testing. Configure Netlify's `LEADPILOT_WORKER_URL` only in the preview environment and only after the staging Worker has been deployed and verified.
+Worker variable:
+- `APP_ORIGIN` must exactly match the Netlify preview origin.
 
-The current authentication setup uses server-side session cookies. Keep the Netlify proxy in front of the Worker so the browser uses the same origin. Never expose secrets in frontend code.
+Netlify preview variable:
+- `LEADPILOT_WORKER_URL` must point to the staging Worker origin.
 
-## Safe next steps
+Do not configure production secrets or production origins as part of this branch. After verifying the remote D1 migrations, deploy only to staging and test login, discovery, LinkedIn status, SABI import, promotion and rejection/requalification.
 
-1. Configure `ADMIN_PASSWORD`, `SESSION_SECRET`, `INGEST_SECRET`, and `APP_ORIGIN` on the staging Worker.
-2. Configure preview-only Netlify `LEADPILOT_WORKER_URL` and test login through the same-origin proxy.
-3. Test discovery, manual lead admission and exclusions with controlled test data.
-4. Measure actual D1 storage using a small, explicitly approved import before considering the full 12-month import.
+## Known limitations in this first test
 
-No production deployment, production environment changes, paid plan, billing upgrade, or real BASE import is authorized by this document. Do not merge this branch into `main` without the user's explicit approval.
+- LinkedIn lookup is assisted, not automatic profile extraction.
+- SABI is a manual CSV export/import process.
+- The generative AI summary layer is not enabled; there is no numeric score. Contract metrics are displayed from imported evidence.
+- Dynamics 365 remains manual; API integration is future work.
+- One user only; no teams or role permissions.
