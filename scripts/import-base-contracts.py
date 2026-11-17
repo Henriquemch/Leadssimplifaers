@@ -7,7 +7,7 @@ import re
 import sys
 import urllib.request
 from collections import OrderedDict
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -282,7 +282,10 @@ def main():  # bounded staging import trial
     if not source:
         raise SystemExit("Manifesto sem a fonte oficial BASE de contratos.")
     today = date.today()
-    cutoff = today - timedelta(days=365)
+    try:
+        cutoff = today.replace(year=today.year - 5)
+    except ValueError:  # 29 February → 28 February five years earlier
+        cutoff = today.replace(year=today.year - 5, day=28)
     dry_run = os.getenv("LEADPILOT_DRY_RUN", "true").lower() != "false"
     worker_url = os.getenv("LEADPILOT_WORKER_URL", "")
     secret = os.getenv("INGEST_SECRET", "")
