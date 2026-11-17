@@ -1,44 +1,51 @@
 # LeadPilot
 
-## Âmbito aprovado
-- Universo: todas as empresas com atividade em contratação pública em Portugal.
-- Janela histórica: últimos 5 anos, em janela móvel (na primeira carga: 13-11-2021 a 13-11-2026).
-- Cobertura nacional, incluindo Portugal continental e regiões autónomas.
-- Não limitar a setores específicos.
+LeadPilot é uma ferramenta individual de prospeção baseada em dados de contratação pública portuguesa.
 
-## Fontes oficiais
-- Contratos BASE/IMPIC: https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/
-- Anúncios BASE/IMPIC: https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-anuncios-de-2012-a-2026/
-- Entidades BASE/IMPIC: https://dados.gov.pt/datasets/contratos-publicos-portal-base-impic-entidades/
-- Modificações contratuais: https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-modificacoes-contratuais-de-2012-a-2026/
-- Documentação IMPIC: https://www.base.gov.pt/Base4/pt/documentacao/formas-de-obter-dados-sobre-os-contratos-publicos/
+## Especificação
 
-## Frequência pretendida
-- Verificar diariamente se os ficheiros oficiais mudaram.
-- Importar os ficheiros quando a fonte os atualizar (a documentação do IMPIC indica atualização semanal no dados.gov.pt).
-- Com API IMPIC autorizada, avaliar sincronização diária.
-- Recalcular métricas após cada importação; revalidar decisores periodicamente.
-- Lusha apenas após aprovação individual explícita, com registo de créditos.
+Consultar [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md) para o fluxo aprovado, estados, critérios de aceitação e limitações da primeira versão.
 
-## Métricas de empresa
-- Número de anúncios/procedimentos associados (apenas quando a fonte comprovar a associação).
-- Número de contratos adjudicados e valor contratual acumulado.
-- Valor médio e maior contrato.
-- Entidades adjudicantes distintas.
-- CPV/setores e evolução anual.
-- Atividade nos últimos 12, 24 e 60 meses.
-- Taxa de sucesso apenas quando existirem dados completos de propostas/concorrentes e resultados.
+## Fluxo funcional
 
-## Qualidade e classificação
-Um contrato publicado identifica o adjudicatário, não todos os concorrentes. Os anúncios identificam procedimentos, mas não garantem que contenham a lista integral de empresas concorrentes. Classificar separadamente:
-- `awardee`: adjudicatário identificado no contrato;
-- `competitor_confirmed`: concorrente identificado por fonte documental específica;
-- `potential`: empresa relevante sem prova de participação;
-- `unverified`: associação ainda não validada.
+1. **Pesquisa** — descobrir empresas através dos dados oficiais BASE.gov.
+2. **Identificação** — consultar os contratos públicos, aprovar/rejeitar a empresa e procurar decisores no LinkedIn.
+3. **Potenciais clientes** — empresas com pelo menos um decisor validado.
+4. **Rejeitados** — arquivo independente com possibilidade de requalificação.
 
-Nunca apresentar adjudicatários como concorrentes confirmados nem inferir concursos perdidos sem evidência.
+Quando não se encontra um decisor no LinkedIn, a empresa fica pendente de SABI. O LeadPilot permite copiar os NIFs em massa, importar um CSV exportado do SABI e validar manualmente os gestores/administradores antes de promover a empresa.
 
-## Estado técnico
-A interface está publicada e consulta metadados dos conjuntos de dados. A ingestão integral, persistência Supabase, agendamento, integração Apollo e Lusha ainda não estão ativos.
+## Dados de contratação pública
 
-Nunca colocar API keys no GitHub. Guardar segredos nas variáveis de ambiente do Netlify. Não expor chaves de serviço Supabase no browser.
+- Universo: empresas com atividade comprovada em contratação pública em Portugal.
+- Histórico pretendido: últimos 5 anos, em janela móvel.
+- Cobertura: Portugal continental e regiões autónomas.
+- Métricas: contratos, adjudicações, valor adjudicado, datas, CPV, entidades adjudicantes e evolução temporal.
+- Não inferir concorrentes ou concursos perdidos sem evidência documental.
+- Não existe pontuação ponderada nem classificação artificial de empresas.
+
+A importação BASE está preparada para uma janela móvel de cinco anos. A atualização dos conjuntos de dados depende da publicação/atualização das fontes oficiais; não é uma consulta transacional em tempo real.
+
+## Arquitetura aprovada
+
+- Frontend: HTML estático em Netlify.
+- API: Cloudflare Workers.
+- Base de dados: Cloudflare D1.
+- Código e histórico: GitHub.
+- Fonte pública: datasets oficiais BASE/IMPIC publicados no dados.gov.pt.
+
+Não utilizar Supabase. Não adicionar subscrições pagas nem consumir APIs pagas sem autorização explícita.
+
+## Estado de implementação
+
+- Branch de trabalho: `feature/leadpilot-four-tab-workflow`.
+- Migração 0010: novos campos LinkedIn, fila SABI, decisores validados e potenciais clientes.
+- Interface: quatro abas e importação SABI em CSV.
+- LinkedIn: pesquisa assistida com links gerados; a página oficial e o decisor são confirmados manualmente. Não há scraping nem acesso privado.
+- SABI: importação manual de CSV; não existe ligação API.
+- Dynamics 365: verificação manual / integração futura.
+- Não foi executada importação real de dados BASE nem deploy de produção nesta implementação.
+
+## Segurança
+
+Nunca colocar passwords, API keys, tokens ou segredos no GitHub ou no frontend. Manter segredos no ambiente do Worker/Netlify. Não ativar a aplicação pública antes de validar autenticação, proxy, D1 e migrações em staging.

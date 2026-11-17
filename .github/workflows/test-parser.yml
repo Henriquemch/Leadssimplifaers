@@ -1,7 +1,7 @@
 name: LeadPilot parser and D1 foundation tests
 on:
   push:
-    branches: [main, "migration/**"]
+    branches: [main, "migration/**", "feature/**"]
     paths:
       - "scripts/**"
       - "tests/**"
@@ -43,12 +43,16 @@ jobs:
           db.executescript(open("migrations/0006_discovery_and_exclusions.sql", encoding="utf-8").read())
           db.executescript(open("migrations/0007_discovery_search_indexes.sql", encoding="utf-8").read())
           db.executescript(open("migrations/0008_discovery_contract_history.sql", encoding="utf-8").read())
+          db.executescript(open("migrations/0009_lead_registry.sql", encoding="utf-8").read())
+          db.executescript(open("migrations/0010_linkedin_sabi_potential_workflow.sql", encoding="utf-8").read())
           names = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-          expected = {"companies", "decision_makers", "approval_events", "import_runs", "source_files", "discovery_profiles", "lead_exclusions", "discovery_contracts"}
+          expected = {"companies", "decision_makers", "approval_events", "import_runs", "source_files", "discovery_profiles", "lead_exclusions", "discovery_contracts", "lead_registry"}
           assert expected <= names, (expected - names)
           company_columns = {row[1] for row in db.execute("PRAGMA table_info(companies)")}
-          assert {"qualification_status", "customer_status", "contacted_status", "active_process_status", "commercial_status"} <= company_columns
+          assert {"qualification_status", "customer_status", "contacted_status", "active_process_status", "commercial_status", "linkedin_company_url", "linkedin_status", "contact_research_status", "lead_source", "potential_client_at"} <= company_columns
           assert "company_events" in names
+          decision_columns = {row[1] for row in db.execute("PRAGMA table_info(decision_makers)")}
+          assert {"email", "phone", "contact_type", "review_status", "notes"} <= decision_columns
           assert "procurements" not in names
           profile_columns = {row[1] for row in db.execute("PRAGMA table_info(companies)")}
           assert {"contract_count", "awardee_contract_count", "competitor_contract_count", "awarded_value_total", "top_cpv_json", "top_authorities_json", "recent_contracts_json"} <= profile_columns
