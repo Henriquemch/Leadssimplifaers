@@ -16,12 +16,15 @@ test("Netlify proxy fails closed when Worker URL is not configured", async () =>
   }
 });
 
-test("frontend contains the five workflow tabs and no browser admin token", async () => {
+test("frontend contains the four approved workflow tabs and no browser admin token", async () => {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
-  for (const tab of ["search", "qualification", "commercial", "people", "crm"]) {
+  for (const tab of ["search", "identification", "potential", "rejected"]) {
     assert.match(html, new RegExp('data-tab="' + tab + '"'));
     assert.match(html, new RegExp('id="tab-' + tab + '"'));
   }
+  assert.match(html, /copySabiNifs/);
+  assert.match(html, /importSabiCsv/);
+  assert.doesNotMatch(html, /app\\.apollo\\.io|app\\.lusha\\.com/);
   assert.doesNotMatch(html, /ADMIN_TOKEN|INGEST_SECRET|SESSION_SECRET/);
   const scriptStart = html.indexOf("<script>") + "<script>".length;
   const scriptEnd = html.indexOf("</script>", scriptStart);
