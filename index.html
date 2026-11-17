@@ -114,11 +114,11 @@ function renderSabiQueue(){
  root.querySelectorAll("[data-open-sabi]").forEach(b=>b.onclick=()=>selectCompany(b.dataset.openSabi));
 }
 function parseSabiCsv(text){
- const clean=text.replace(/^\\uFEFF/,"");const first=clean.split(/\\r?\\n/,1)[0];const delimiter=(first.match(/;/g)||[]).length>(first.match(/,/g)||[]).length?";":",";
+ const clean=text.replace(/^\uFEFF/,"");const first=clean.split(/\r?\n/,1)[0];const delimiter=(first.match(/;/g)||[]).length>(first.match(/,/g)||[]).length?";":",";
  const rows=[];let row=[],field="",quoted=false;
  for(let i=0;i<clean.length;i++){const ch=clean[i];if(ch==='"'&&quoted&&clean[i+1]==='"'){field+='"';i++}else if(ch==='"'){quoted=!quoted}else if(ch===delimiter&&!quoted){row.push(field);field=""}else if((ch==="\\n"||ch==="\\r")&&!quoted){if(ch==="\\r"&&clean[i+1]==="\\n")i++;row.push(field);if(row.some(v=>v.trim()))rows.push(row);row=[];field=""}else field+=ch}
  row.push(field);if(row.some(v=>v.trim()))rows.push(row);if(rows.length<2)throw new Error("O CSV não contém linhas de dados.");
- const norm=s=>String(s||"").normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
+ const norm=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
  const headers=rows[0].map(norm);
  const find=aliases=>{for(const alias of aliases){const exact=headers.findIndex(h=>h===norm(alias));if(exact>=0)return exact}for(const alias of aliases.filter(a=>norm(a)!=="nome")){const partial=headers.findIndex(h=>h.includes(norm(alias)));if(partial>=0)return partial}return headers.findIndex(h=>h==="nome")};
  const nifI=find(["nif","nif empresa","numero contribuinte","contribuinte","tax id"]);
@@ -127,7 +127,7 @@ function parseSabiCsv(text){
  const emailI=find(["email","correio eletronico","email profissional"]);
  const phoneI=find(["telefone","telemovel","phone"]);
  if(nifI<0||nameI<0)throw new Error("Não encontrei as colunas NIF e Nome/Administrador no CSV.");
- return rows.slice(1).map(r=>({nif:String(r[nifI]||"").replace(/\\D/g,""),full_name:String(r[nameI]||"").trim(),job_title:roleI>=0?String(r[roleI]||"").trim():"",email:emailI>=0?String(r[emailI]||"").trim():"",phone:phoneI>=0?String(r[phoneI]||"").trim():""})).filter(r=>r.nif.length===9&&r.full_name);
+ return rows.slice(1).map(r=>({nif:String(r[nifI]||"").replace(/\D/g,""),full_name:String(r[nameI]||"").trim(),job_title:roleI>=0?String(r[roleI]||"").trim():"",email:emailI>=0?String(r[emailI]||"").trim():"",phone:phoneI>=0?String(r[phoneI]||"").trim():""})).filter(r=>r.nif.length===9&&r.full_name);
 }
 async function importSabiCsv(){
  const input=$("sabiCsvFile"),status=$("sabiImportStatus"),file=input.files?.[0];if(!file){status.textContent="Seleciona primeiro um ficheiro CSV exportado do SABI.";return}
