@@ -120,7 +120,7 @@ function parseSabiCsv(text){
  row.push(field);if(row.some(v=>v.trim()))rows.push(row);if(rows.length<2)throw new Error("O CSV não contém linhas de dados.");
  const norm=s=>String(s||"").normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
  const headers=rows[0].map(norm);
- const find=aliases=>headers.findIndex(h=>aliases.some(a=>h===norm(a)||h.includes(norm(a))));
+ const find=aliases=>{for(const alias of aliases){const exact=headers.findIndex(h=>h===norm(alias));if(exact>=0)return exact}for(const alias of aliases.filter(a=>norm(a)!=="nome")){const partial=headers.findIndex(h=>h.includes(norm(alias)));if(partial>=0)return partial}return headers.findIndex(h=>h==="nome")};
  const nifI=find(["nif","nif empresa","numero contribuinte","contribuinte","tax id"]);
  const nameI=find(["nome completo","nome do administrador","nome do gerente","nome do gestor","administrador","gerente","gestor","responsavel","nome"]);
  const roleI=find(["cargo","funcao","cargo funcao","qualidade","job title"]);
