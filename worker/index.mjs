@@ -214,7 +214,8 @@ export default {
       }
       if (inserts.length) {
         const updates = [...companyUpdates].map(companyId => env.DB.prepare("UPDATE companies SET contact_research_status = 'sabi_imported', updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(companyId));
-        await env.DB.batch([...inserts, ...updates]);
+        await env.DB.batch(inserts);
+        if (updates.length) await env.DB.batch(updates);
       }
       return json({ ok: true, imported: inserts.length, skipped, companies_updated: companyUpdates.size });
     }
@@ -227,7 +228,7 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/api/companies") {
-      const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 50), 1), 100);
+      const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 100), 1), 500);
       const filters = [];
       const values = [];
       const q = (url.searchParams.get("q") || "").trim().slice(0, 100);
