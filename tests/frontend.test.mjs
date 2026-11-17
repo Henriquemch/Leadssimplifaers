@@ -35,9 +35,10 @@ test("frontend contains the four approved workflow tabs and no browser admin tok
 
 test("SABI CSV parser maps the manager name, not the company name", async () => {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
-  const match = html.match(/function parseSabiCsv\(text\)\{[\s\S]*?\n\}/);
-  assert.ok(match, "parseSabiCsv must exist in the frontend");
-  const parseSabiCsv = new Function(match[0] + "; return parseSabiCsv;")();
+  const start = html.indexOf("function parseSabiCsv(text){");
+  const end = html.indexOf("async function importSabiCsv()", start);
+  assert.ok(start >= 0 && end > start, "parseSabiCsv must exist in the frontend");
+  const parseSabiCsv = new Function(html.slice(start, end) + "; return parseSabiCsv;")();
   const rows = parseSabiCsv("\uFEFFNIF;Nome da Empresa;Nome do Administrador;Cargo;Email\n501234567;Empresa Exemplo;João Silva;Administrador;joao@exemplo.pt");
   assert.equal(rows.length, 1);
   assert.equal(rows[0].nif, "501234567");
