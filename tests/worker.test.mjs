@@ -333,7 +333,7 @@ test("company evidence endpoint reads paginated 12/24-month discovery contract h
       }
     }
   };
-  const response = await app.fetch(new Request("https://leadpilot.test/api/companies/c1/procurements?months=24&limit=1&offset=0", {
+  const response = await app.fetch(new Request("https://leadpilot.test/api/companies/nif%3A501000000/procurements?months=24&limit=1&offset=0", {
     headers: { cookie: await adminCookie() }
   }), localEnv);
   assert.equal(response.status, 200);
