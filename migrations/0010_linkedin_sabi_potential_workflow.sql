@@ -8,14 +8,8 @@ ALTER TABLE companies ADD COLUMN lead_source TEXT
   CHECK (lead_source IS NULL OR lead_source IN ('linkedin','sabi','manual'));
 ALTER TABLE companies ADD COLUMN potential_client_at TEXT;
 
--- Align the decision-maker table with the API fields used by the application.
-ALTER TABLE decision_makers ADD COLUMN email TEXT;
-ALTER TABLE decision_makers ADD COLUMN phone TEXT;
-ALTER TABLE decision_makers ADD COLUMN contact_type TEXT NOT NULL DEFAULT 'decision_maker'
-  CHECK (contact_type IN ('decision_maker','general'));
-ALTER TABLE decision_makers ADD COLUMN review_status TEXT NOT NULL DEFAULT 'pending'
-  CHECK (review_status IN ('pending','selected','rejected'));
-ALTER TABLE decision_makers ADD COLUMN notes TEXT;
+-- Decision-maker contact fields are already managed by migration 0011_decision_maker_contact_fields.sql.
+-- Keep this migration focused on company workflow state.
 
 CREATE INDEX IF NOT EXISTS idx_companies_potential_clients
   ON companies(potential_client_at DESC);
