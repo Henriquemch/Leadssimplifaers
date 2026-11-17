@@ -45,6 +45,7 @@ jobs:
           db.executescript(open("migrations/0008_discovery_contract_history.sql", encoding="utf-8").read())
           db.executescript(open("migrations/0009_lead_registry.sql", encoding="utf-8").read())
           db.executescript(open("migrations/0010_linkedin_sabi_potential_workflow.sql", encoding="utf-8").read())
+          db.executescript(open("migrations/0011_decision_maker_contact_fields.sql", encoding="utf-8").read())
           names = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
           expected = {"companies", "decision_makers", "approval_events", "import_runs", "source_files", "discovery_profiles", "lead_exclusions", "discovery_contracts", "lead_registry"}
           assert expected <= names, (expected - names)
