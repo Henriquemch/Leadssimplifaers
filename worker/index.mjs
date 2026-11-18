@@ -345,8 +345,8 @@ export default {
     const sabiQueueMatch = url.pathname.match(/^\/api\/companies\/([^/]+)\/sabi-queue$/);
     if (request.method === "POST" && sabiQueueMatch) {
       const companyId = decodeURIComponent(sabiQueueMatch[1]);
-      const exists = await env.DB.prepare("SELECT id FROM companies WHERE id = ? LIMIT 1").bind(companyId).first();
-      if (!exists) return json({ ok: false, error: "Empresa não encontrada." }, 404);
+      const exists = await env.DB.prepare("SELECT id FROM companies WHERE id = ? LIMIT 1").bind(companyId).all();
+      if (!exists.results?.length) return json({ ok: false, error: "Empresa não encontrada." }, 404);
       await env.DB.prepare("UPDATE companies SET linkedin_status = CASE WHEN linkedin_status = 'found' THEN linkedin_status ELSE 'not_found' END, contact_research_status = 'sabi_pending', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
         .bind(companyId).run();
       return json({ ok: true, company_id: companyId, contact_research_status: "sabi_pending" });
