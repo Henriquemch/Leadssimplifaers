@@ -251,6 +251,37 @@ function envWithCompany(company) {
   };
 }
 
+test("SABI queue action marks an existing company as pending", async () => {
+  let updateValues = null;
+  const localEnv = {
+    ...env,
+    DB: {
+      prepare(sql) {
+        return {
+          bind(...values) {
+            return {
+              sql, values,
+              async all() {
+                if (sql.includes("SELECT id, qualification_status")) return { results: [{ id: "c1", qualification_status: "approved" }] };
+                return { results: [] };
+              },
+              async run() { updateValues = values; return { success: true }; }
+            };
+          }
+        };
+      },
+      async batch(statements) { return statements.map(() => ({ success: true })); }
+    }
+  };
+  const response = await app.fetch(new Request("https://leadpilot.test/api/companies/c1/sabi-queue", {
+    method: "POST",
+    headers: { cookie: await adminCookie(), origin: env.APP_ORIGIN, "content-type": "application/json" }
+  }), localEnv);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { ok: true, company_id: "c1", contact_research_status: "sabi_pending" });
+  assert.deepEqual(updateValues, ["c1"]);
+});
+
 test("commercial check is blocked before qualification approval", async () => {
   const response = await app.fetch(new Request("https://leadpilot.test/api/companies/c1/commercial-check", {
     method: "PATCH",
