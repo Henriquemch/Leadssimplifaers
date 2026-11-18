@@ -169,6 +169,7 @@ hr{border:0;border-top:1px solid #293952}
 /* Fix identification workspace: keep saved-company list full width on desktop */
 @media(min-width:681px){
  #tab-identification:not(.hidden){display:block;}
+ #tab-identification>#sabi-queue-panel,#tab-identification>#sabi-import-panel{display:block!important;}
  #tab-identification>#saved-companies-panel{display:block!important;grid-column:auto!important;grid-row:auto!important;position:static!important;width:100%;max-width:none;max-height:none;overflow:visible!important;}
  #savedCompaniesList{width:100%;min-width:0;}
  .ident-company{width:100%;min-width:0;}
@@ -228,7 +229,7 @@ function renderSavedCompanies(){
  const savedPanel=$("saved-companies-panel");if(savedPanel&&host&&savedPanel.parentElement!==host)host.appendChild(savedPanel);
  const root=$("savedCompaniesList");if(!root)return;
  ["identification-overview-panel","people-panel","sabi-queue-panel","sabi-import-panel"].forEach(id=>{const node=$(id);if(node&&host&&node.parentElement!==host)host.appendChild(node)});
- const rows=state.companies.filter(c=>c.qualification_status!=="rejected"&&!c.potential_client_at).sort((a,b)=>(a.qualification_status==="approved"?-1:0)-(b.qualification_status==="approved"?-1:0)||String(b.last_seen_at||"").localeCompare(String(a.last_seen_at||"")));
+ const rows=state.companies.filter(c=>c.qualification_status!=="rejected"&&!c.potential_client_at&&!["sabi_pending","sabi_imported"].includes(c.contact_research_status)).sort((a,b)=>(a.qualification_status==="approved"?-1:0)-(b.qualification_status==="approved"?-1:0)||String(b.last_seen_at||"").localeCompare(String(a.last_seen_at||"")));
  root.innerHTML=rows.length?rows.map((c,i)=>{
   const active=state.selected?.id===c.id;
   return '<article class="ident-company '+(active?"is-open":"")+'" data-ident-company="'+esc(c.id)+'">'+
@@ -243,7 +244,7 @@ async function openIdentificationInline(id){
  if(!state.selected)return;
  await renderIdentification();
  const slot=$("inline-"+id);if(!slot)return;
- ["identification-overview-panel","qualification-panel","people-panel","sabi-queue-panel","sabi-import-panel"].forEach(panelId=>{const node=$(panelId);if(node)slot.appendChild(node)});
+ ["identification-overview-panel","people-panel"].forEach(panelId=>{const node=$(panelId);if(node)slot.appendChild(node)});
  slot.classList.add("open");
  const active=slot.closest(".ident-company");active?.classList.add("is-open");
 }
@@ -253,7 +254,6 @@ function field(label,name,value){return '<div class="field"><label>'+label+'</la
 async function renderPeople(){
  const root=$("peoplePanel"),c=state.selected;
  if(!c){root.textContent="Seleciona uma empresa para iniciar a pesquisa de decisores.";return}
- if(c.qualification_status!=="approved"){root.innerHTML='<div class="notice">Aprova primeiro a empresa na secção de qualificação. A pesquisa de decisores só fica disponível depois da tua validação.</div>';return}
  const companySearch="https://www.linkedin.com/search/results/companies/?keywords="+encodeURIComponent(c.name);
  const companySearchLabel="Pesquisar empresa no LinkedIn";
  const peopleSearch="https://www.linkedin.com/search/results/people/?keywords="+encodeURIComponent(c.name);
@@ -290,11 +290,14 @@ async function renderIdentification(){
    const d=await api("/api/companies/"+encodeURIComponent(c.id)+"/procurements?months="+months+"&limit=50&offset="+offset),x=d.summary||{},rows=d.procurements||[],cpvs=d.top_cpv||[],auth=d.top_authorities||[];
    procurementRows=append?procurementRows.concat(rows):rows;
    const historyRows=procurementRows.map(p=>'<tr><td>'+esc(p.publication_date||"—")+'</td><td>'+esc(p.description||"—")+'</td><td>'+esc(p.contracting_authority||"—")+'</td><td align="right">'+(p.contract_value==null?"—":Number(p.contract_value).toLocaleString("pt-PT",{style:"currency",currency:"EUR"}))+'</td><td>'+esc(p.cpv||"—")+'</td></tr>').join("");
-   const header='<div class="fields"><div><b>CPV principais</b>'+(cpvs.length?'<ul>'+cpvs.map(v=>'<li>'+esc(v.cpv)+' · '+esc(v.contracts)+' contratos</li>').join("")+'</ul>':'<p class="muted small">Sem CPV registados.</p>')+'</div><div><b>Entidades adjudicantes principais</b>'+(auth.length?'<ul>'+auth.map(v=>'<li>'+esc(v.contracting_authority)+' · '+esc(v.contracts)+' contratos</li>').join("")+'</ul>':'<p class="muted small">Sem entidades registadas.</p>')+'</div></div><b>Histórico de contratação</b><div class="muted small">A mostrar '+procurementRows.length+' de '+(d.total||0)+' registos · '+months+' meses</div>';
+   const header='<b>Histórico de contratação</b><div class="muted small">A mostrar '+procurementRows.length+' de '+(d.total||0)+' registos · '+months+' meses</div>';
     $("procurementMetrics").innerHTML='<div class="field" style="max-width:330px"><label>Período de análise</label><select id="procurementMonths"><option value="12" '+(months===12?"selected":"")+'>Últimos 12 meses</option><option value="24" '+(months===24?"selected":"")+'>Últimos 24 meses</option></select></div><div class="grid" style="margin-top:10px"><div class="card"><div class="muted small">Adjudicações / participações</div><div class="num">'+esc(x.total_contracts||0)+'</div></div><div class="card"><div class="muted small">Valor adjudicado</div><div class="num">'+Number(x.total_value||0).toLocaleString("pt-PT",{style:"currency",currency:"EUR",maximumFractionDigits:0})+'</div></div><div class="card"><div class="muted small">Contrato mais recente</div><div class="num" style="font-size:18px">'+esc(x.latest_date||"—")+'</div></div></div>';
    const table='<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;margin-top:8px"><thead><tr><th align="left">Data</th><th align="left">Contrato / objeto</th><th align="left">Entidade</th><th align="right">Valor</th><th>CPV</th></tr></thead><tbody>'+historyRows+'</tbody></table></div>';
    const more=d.has_more?'<button id="loadMoreProcurements" class="secondary" type="button" style="margin-top:10px">Carregar mais 50 adjudicações</button>':'';
-   root.innerHTML=header+table+more;
+   const wasHistoryOpen=append&&$("procurementHistoryContent")&&!$("procurementHistoryContent").classList.contains("hidden");
+   root.innerHTML=header+'<button id="toggleProcurementHistory" class="secondary" type="button" aria-expanded="false" style="margin-top:10px">Ver contratos ＋</button><div id="procurementHistoryContent" class="hidden" style="margin-top:12px">'+table+more+'</div>';
+   $("toggleProcurementHistory").onclick=()=>{const content=$("procurementHistoryContent"),open=content.classList.toggle("hidden")===false;$("toggleProcurementHistory").textContent=open?"Ocultar contratos −":"Ver contratos ＋";$("toggleProcurementHistory").setAttribute("aria-expanded",String(open));};
+   if(wasHistoryOpen){$("procurementHistoryContent").classList.remove("hidden");$("toggleProcurementHistory").textContent="Ocultar contratos −";$("toggleProcurementHistory").setAttribute("aria-expanded","true");}
    const monthMap=new Map();
    procurementRows.forEach(p=>{const raw=String(p.publication_date||"");const m=raw.match(/^(\d{4})[-/](\d{1,2})/);if(!m)return;const key=m[1]+"-"+String(m[2]).padStart(2,"0");monthMap.set(key,(monthMap.get(key)||0)+1)});
    const monthsData=[...monthMap.entries()].sort((a,b)=>a[0].localeCompare(b[0])).slice(-12);
@@ -333,11 +336,17 @@ async function renderPotentialClients(){
 }
 function renderSabiQueue(){
  const root=$("sabiQueueList");if(!root)return;
- const pending=state.companies.filter(c=>c.qualification_status==="approved"&&c.contact_research_status==="sabi_pending");
- const imported=state.companies.filter(c=>c.qualification_status==="approved"&&c.contact_research_status==="sabi_imported");
+ const pending=state.companies.filter(c=>c.contact_research_status==="sabi_pending");
+ const imported=state.companies.filter(c=>c.contact_research_status==="sabi_imported");
  const rows=[...pending,...imported];
  root.innerHTML=rows.length?'<div class="muted small">'+pending.length+' NIFs por pesquisar · '+imported.length+' empresas com resultados SABI importados e pendentes de validação.</div>'+rows.map(c=>'<div class="company"><div><b>'+companyTitle(c)+'</b><div class="muted small">'+(c.contact_research_status==="sabi_imported"?"Resultados SABI importados — validar decisores":"Sem decisor identificado no LinkedIn")+'</div></div><button class="secondary fit" data-open-sabi="'+esc(c.id)+'" type="button">Abrir ficha</button></div>').join(""):'<p class="muted">Ainda não existem empresas pendentes de pesquisa no SABI.</p>';
- root.querySelectorAll("[data-open-sabi]").forEach(b=>b.onclick=()=>{selectCompany(b.dataset.openSabi);switchTab("identification")});
+ root.querySelectorAll("[data-open-sabi]").forEach(b=>b.onclick=()=>{selectCompany(b.dataset.openSabi);switchTab("identification");openSabiCompany(b.dataset.openSabi)});
+}
+async function openSabiCompany(id){
+ const c=state.companies.find(x=>x.id===id);if(!c)return;state.selected=c;
+ let slot=$("sabi-company-workspace");if(!slot){slot=document.createElement("div");slot.id="sabi-company-workspace";slot.className="panel";$("sabi-queue-panel").appendChild(slot)}
+ slot.innerHTML='<b>Ficha para validação SABI</b><div id="sabi-company-slot" class="ident-inline open"></div>';
+ await renderIdentification();const target=$("sabi-company-slot");["identification-overview-panel","people-panel"].forEach(panelId=>{const node=$(panelId);if(node)target.appendChild(node)});
 }
 function parseSabiCsv(text){
  const clean=text.replace(/^\uFEFF/,"");const first=clean.split(/\r?\n/,1)[0];const delimiter=(first.match(/;/g)||[]).length>(first.match(/,/g)||[]).length?";":",";
