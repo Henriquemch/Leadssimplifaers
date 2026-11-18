@@ -165,6 +165,19 @@ hr{border:0;border-top:1px solid #293952}
 .empty-state{padding:25px;text-align:center;border:1px dashed #334968;border-radius:12px}
 @keyframes identReveal{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:680px){.ident-company-head{gap:8px;padding:13px 10px!important}.ident-index{flex-basis:20px}.ident-company-main strong{font-size:12px}.ident-company-state{font-size:9px;padding:4px 6px}.ident-inline{padding:0 10px 12px}.ident-inline .grid{grid-template-columns:1fr}.ident-bar-row{grid-template-columns:90px 1fr auto}}
+
+/* Fix identification workspace: keep saved-company list full width on desktop */
+@media(min-width:681px){
+ #tab-identification{display:block!important;}
+ #tab-identification>#saved-companies-panel{display:block!important;grid-column:auto!important;grid-row:auto!important;position:static!important;width:100%;max-width:none;max-height:none;overflow:visible!important;}
+ #savedCompaniesList{width:100%;min-width:0;}
+ .ident-company{width:100%;min-width:0;}
+ .ident-company-head{min-width:0;}
+ .ident-company-main{min-width:0;overflow-wrap:anywhere;}
+ .ident-inline{min-width:0;max-width:100%;}
+ .ident-inline .panel{min-width:0;max-width:100%;}
+ .ident-inline table{min-width:680px;}
+}
 </style></head><body>
 <div id="login" class="login hidden"><div class="eyebrow">LEADPILOT · ACESSO PRIVADO</div><h1>Entrar na plataforma</h1><p class="muted">Acesso reservado. A sessão é protegida pelo servidor.</p><form id="loginForm"><div class="field"><label for="password">Palavra-passe</label><input id="password" type="password" autocomplete="current-password" required></div><p><button type="submit">Entrar</button></p></form><div id="loginStatus" class="status hidden"></div></div>
 <div id="app" class="shell hidden"><aside class="sidebar"><div class="logo">lead<span>pilot</span></div>
