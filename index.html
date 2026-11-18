@@ -285,7 +285,7 @@ async function renderIdentification(){
    const more=d.has_more?'<button id="loadMoreProcurements" class="secondary" type="button" style="margin-top:10px">Carregar mais 50 adjudicações</button>':'';
    root.innerHTML=header+table+more;
    const monthMap=new Map();
-   procurementRows.forEach(p=>{const raw=String(p.publication_date||"");const m=raw.match(/^(\\d{4})[-/](\\d{1,2})/);if(!m)return;const key=m[1]+"-"+String(m[2]).padStart(2,"0");monthMap.set(key,(monthMap.get(key)||0)+1)});
+   procurementRows.forEach(p=>{const raw=String(p.publication_date||"");const m=raw.match(/^(\d{4})[-/](\d{1,2})/);if(!m)return;const key=m[1]+"-"+String(m[2]).padStart(2,"0");monthMap.set(key,(monthMap.get(key)||0)+1)});
    const monthsData=[...monthMap.entries()].sort((a,b)=>a[0].localeCompare(b[0])).slice(-12);
    const maxMonth=Math.max(1,...monthsData.map(x=>x[1]));
    const points=monthsData.map((x,i)=>{const px=18+(monthsData.length<2?0:i*264/(monthsData.length-1));const py=92-(x[1]/maxMonth)*66;return px+","+py}).join(" ");
@@ -358,14 +358,3 @@ $("copySabiNifs").onclick=async()=>{const rows=state.companies.filter(c=>c.quali
 $("importSabiCsv").onclick=importSabiCsv;
 $("refreshPotential").onclick=renderPotentialClients;
 $("refreshRejected").onclick=async()=>{await loadCompanies();renderRejected()};
-
-async function boot(){try{const d=await api("/auth/session");if(!d.authenticated){$("login").classList.remove("hidden");return}$("app").classList.remove("hidden");showStatus("Sessão autenticada. A carregar dados guardados.");await loadCompanies();showStatus("Ligação autenticada. Os registos apresentados vêm da base de dados.");}catch(e){$("app").classList.remove("hidden");showStatus("Modo de pré-visualização: API ainda não ligada. Os separadores estão disponíveis, mas pesquisa, gravação e autenticação ficam inativas até configurar o servidor.", "status");$("discoveryResults").innerHTML='<p class="muted">A base de dados ainda não está ligada. Não existem registos disponíveis nesta pré-visualização.</p>';$("companyCount").textContent="—";$("peopleCount").textContent="—"}}
-$("loginForm").onsubmit=async e=>{e.preventDefault();const status=$("loginStatus");status.classList.remove("hidden");status.textContent="A validar acesso…";try{await api("/auth/login",{method:"POST",body:JSON.stringify({password:$("password").value})});$("login").classList.add("hidden");$("app").classList.remove("hidden");await loadCompanies();showStatus("Sessão iniciada.");}catch(err){status.textContent=err.message}};
-$("logout").onclick=async()=>{try{await api("/auth/logout",{method:"POST"})}finally{location.reload()}};
-$("refreshSavedCompanies").onclick=async()=>{try{await loadCompanies();showStatus("Lista de empresas atualizada.")}catch(e){showStatus("Não foi possível atualizar a lista: "+e.message,"status error")}};
-$("discoveryActivityMode").onchange=()=>{$("discoveryActivityLabel").textContent=$("discoveryActivityMode").value==="cpv"?"Código CPV":"Setor / atividade";$("discoveryActivity").placeholder=$("discoveryActivityMode").value==="cpv"?"Ex.: 45000000 ou 45000000-7":"Ex.: limpeza, construção, informática"};
-async function searchDiscovery(){
- const params=new URLSearchParams(); const q=$("discoveryQuery").value.trim(),activity=$("discoveryActivity").value.trim(),mode=$("discoveryActivityMode").value,min=$("discoveryMin").value,max=$("discoveryMax").value,role=$("discoveryRole").value,period=$("discoveryPeriod").value;
- if(q)params.set("q",q);if(activity)params.set(mode==="cpv"?"cpv":"sector",activity);if(min)params.set("min_value",min);if(max)params.set("max_value",max);if(role)params.set("role",role);
- if(period){const since=new Date();since.setMonth(since.getMonth()-Number(period));params.set("from_date",since.toISOString().slice(0,10));}params.set("limit","30");
- const root=$("discoveryResults");root.innerHTML='<p class="muted">A pesquisar no índice BASE…</p>';
