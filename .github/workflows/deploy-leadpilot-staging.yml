@@ -61,6 +61,21 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: wrangler d1 migrations apply leadpilot --remote --config wrangler.toml
+      - name: Verify live D1 write-path schema (read-only)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo "=== companies ==="
+          wrangler d1 execute leadpilot --remote --config wrangler.toml --command "PRAGMA table_info(companies)"
+          echo "=== decision_makers ==="
+          wrangler d1 execute leadpilot --remote --config wrangler.toml --command "PRAGMA table_info(decision_makers)"
+          echo "=== lead_registry ==="
+          wrangler d1 execute leadpilot --remote --config wrangler.toml --command "PRAGMA table_info(lead_registry)"
+          echo "=== company_events ==="
+          wrangler d1 execute leadpilot --remote --config wrangler.toml --command "PRAGMA table_info(company_events)"
+          echo "=== validate SABI UPDATE statement (EXPLAIN only) ==="
+          wrangler d1 execute leadpilot --remote --config wrangler.toml --command "EXPLAIN UPDATE companies SET linkedin_status='not_found', contact_research_status='sabi_pending', updated_at=CURRENT_TIMESTAMP WHERE id='__diagnostic__'"
       - name: Deploy staging Worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
