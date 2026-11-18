@@ -125,6 +125,46 @@ hr{border:0;border-top:1px solid #293952}
  .section-jump{background:rgba(13,23,39,.97)}
 }
 
+
+/* Identification continuous workspace */
+#tab-identification>.section-jump{display:none}
+#tab-identification>.panel:not(#saved-companies-panel){display:none}
+#savedCompaniesList{max-height:none!important;overflow:visible!important;padding:0!important;margin-top:18px!important}
+.ident-company{border:1px solid #2a3d59;border-radius:13px;margin:10px 0;overflow:hidden;background:linear-gradient(135deg,#111e32,#0d1829);transition:border-color .18s,box-shadow .18s}
+.ident-company:hover{border-color:#49658d}
+.ident-company.is-open{border-color:#6389e5;box-shadow:0 0 0 1px #6389e533,0 12px 28px #0003}
+.ident-company-head{display:flex;align-items:center;gap:13px;width:100%;text-align:left;background:transparent!important;border:0!important;box-shadow:none!important;padding:16px 17px!important;transform:none!important}
+.ident-company-head:hover{background:#192943!important;transform:none!important}
+.ident-index{font-size:11px;font-weight:800;color:#8298bb;letter-spacing:1px;flex:0 0 30px}
+.ident-company-main{display:flex;flex:1;min-width:0;flex-direction:column;gap:4px}
+.ident-company-main strong{font-size:14px;color:#eef3ff}
+.ident-company-main small{font-size:11px;color:#8798b3}
+.ident-company-state{font-size:11px;color:#f0c77a;background:#3b301d;border:1px solid #62502d;border-radius:20px;padding:5px 9px;white-space:nowrap}
+.ident-company-state.good{color:#9be2c3;background:#15372e;border-color:#28634f}
+.ident-chevron{font-size:17px;color:#9db5e7;flex:0 0 20px;text-align:center}
+.ident-inline{display:none;border-top:1px solid #293c59;padding:0 18px 18px}
+.ident-inline.open{display:block;animation:identReveal .22s ease-out}
+.ident-inline .panel{margin:15px 0;background:linear-gradient(145deg,#17263e,#101b2d);box-shadow:none}
+.ident-inline .panel:first-child{margin-top:14px}
+.ident-inline .grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.ident-inline table{min-width:680px}
+.ident-inline .fields{gap:12px}
+.ident-chart{border:1px solid #2b405f;border-radius:12px;background:#0d192b;padding:14px;margin:14px 0}
+.ident-chart-title{font-size:12px;font-weight:750;color:#dce7fb;margin-bottom:10px}
+.ident-chart svg{display:block;width:100%;height:auto;overflow:visible}
+.ident-chart-legend{display:flex;justify-content:space-between;gap:10px;color:#8092ad;font-size:10px;margin-top:5px}
+.ident-bars{display:grid;gap:10px;margin-top:12px}
+.ident-bar-row{display:grid;grid-template-columns:minmax(100px,1fr) minmax(70px,2fr) auto;align-items:center;gap:10px;font-size:11px;color:#b8c7dc}
+.ident-bar-track{height:7px;border-radius:20px;background:#1e2d45;overflow:hidden}
+.ident-bar-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,#4b76e8,#8eafff)}
+.ident-step-line{display:flex;align-items:center;gap:0;margin:14px 0;overflow:auto}
+.ident-step{display:flex;align-items:center;gap:7px;white-space:nowrap;color:#8495af;font-size:10px}
+.ident-step-dot{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:#1b2b43;border:1px solid #3b5275;color:#9db5e7;font-size:10px}
+.ident-step.done .ident-step-dot{background:#164331;border-color:#34765a;color:#a4ebc9}
+.ident-step-connector{height:1px;min-width:22px;background:#344965;margin:0 8px}
+.empty-state{padding:25px;text-align:center;border:1px dashed #334968;border-radius:12px}
+@keyframes identReveal{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:680px){.ident-company-head{gap:8px;padding:13px 10px!important}.ident-index{flex-basis:20px}.ident-company-main strong{font-size:12px}.ident-company-state{font-size:9px;padding:4px 6px}.ident-inline{padding:0 10px 12px}.ident-inline .grid{grid-template-columns:1fr}.ident-bar-row{grid-template-columns:90px 1fr auto}}
 </style></head><body>
 <div id="login" class="login hidden"><div class="eyebrow">LEADPILOT · ACESSO PRIVADO</div><h1>Entrar na plataforma</h1><p class="muted">Acesso reservado. A sessão é protegida pelo servidor.</p><form id="loginForm"><div class="field"><label for="password">Palavra-passe</label><input id="password" type="password" autocomplete="current-password" required></div><p><button type="submit">Entrar</button></p></form><div id="loginStatus" class="status hidden"></div></div>
 <div id="app" class="shell hidden"><aside class="sidebar"><div class="logo">lead<span>pilot</span></div>
@@ -139,7 +179,7 @@ hr{border:0;border-top:1px solid #293952}
 <div id="globalStatus" class="status">A verificar sessão e ligação à API…</div>
 <section id="tab-search" class="tabview"><div class="panel"><div class="row"><div><b>Descobrir empresas</b><div class="muted small">Pesquisa de mercado no BASE. Os resultados não entram no CRM até escolheres “Adicionar ao LeadPilot”.</div></div><div class="fit"><button id="searchBtn">Pesquisar</button></div></div><div class="fields" style="margin-top:14px"><div class="field"><label>Pesquisar atividade por</label><select id="discoveryActivityMode"><option value="sector">Setor / atividade (texto)</option><option value="cpv">Código CPV</option></select></div><div class="field"><label id="discoveryActivityLabel">Setor / atividade</label><input id="discoveryActivity" placeholder="Ex.: limpeza, construção, informática"></div><div class="field"><label>Nome ou NIF (opcional)</label><input id="discoveryQuery" placeholder="Pesquisar empresa"></div><div class="field"><label>Valor mínimo adjudicado (€)</label><input id="discoveryMin" type="number" min="0" placeholder="Sem mínimo"></div><div class="field"><label>Valor máximo adjudicado (€)</label><input id="discoveryMax" type="number" min="0" placeholder="Sem máximo"></div><div class="field"><label>Participação</label><select id="discoveryRole"><option value="">Todos</option><option value="awardee">Adjudicatários</option><option value="competitor_confirmed">Concorrentes</option></select></div><div class="field"><label>Período dos contratos</label><select id="discoveryPeriod"><option value="12" selected>Últimos 12 meses</option><option value="24">Últimos 24 meses</option></select></div></div><div class="muted small" style="margin-top:10px">Cada filtro é opcional e pode ser combinado com os restantes. Sem filtros, pesquisa todas as empresas disponíveis na base. Máximo de 30 empresas por página.</div></div><div id="discoveryResults" class="panel"><p class="muted">Define os critérios e inicia uma pesquisa.</p></div></section>
 <section id="tab-identification" class="tabview hidden">
-<div class="panel"><div class="row"><div><b>Ficha de identificação da empresa</b><div class="muted small">Toda a informação reunida num único local: contratação pública, qualificação, contactos e decisores.</div></div><div class="fit"><span id="identificationStatus" class="pill">Seleciona uma empresa</span></div></div><div id="identificationSummary" class="muted" style="margin-top:14px">Adiciona uma empresa a partir da Pesquisa para abrir a respetiva ficha.</div></div>
+<div class="panel" id="identification-overview-panel"><div class="row"><div><b>Ficha de identificação da empresa</b><div class="muted small">Toda a informação reunida num único local: contratação pública, qualificação, contactos e decisores.</div></div><div class="fit"><span id="identificationStatus" class="pill">Seleciona uma empresa</span></div></div><div id="identificationSummary" class="muted" style="margin-top:14px">Adiciona uma empresa a partir da Pesquisa para abrir a respetiva ficha.</div></div>
 <nav class="section-jump" aria-label="Atalhos da ficha">
 <button type="button" data-jump="identificationQualification">Qualificação</button>
 <button type="button" data-jump="peoplePanel">Decisores</button>
@@ -167,19 +207,32 @@ const participantLabel=v=>({awardee:"Adjudicatário",competitor_confirmed:"Conco
 async function api(path,options={}){const r=await fetch(API+path,{credentials:"same-origin",...options,headers:{"content-type":"application/json",...(options.headers||{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||"Erro na comunicação com a API.");return d}
 function showStatus(message,kind="status"){const el=$("globalStatus");el.className=kind;el.textContent=message}
 document.addEventListener("click",event=>{const button=event.target.closest("[data-jump]");if(!button)return;const target=$(button.dataset.jump);if(target){const panel=target.closest(".panel")||target;panel.scrollIntoView({behavior:"smooth",block:"start"});}});
-function selectCompany(id){state.selected=state.companies.find(c=>c.id===id)||null;renderIdentification()}
+function selectCompany(id){state.selected=state.companies.find(c=>c.id===id)||null;if(state.tab==="identification")openIdentificationInline(id);else renderIdentification()}
 function companyTitle(c){return esc(c.name)+(c.nif?" · NIF "+esc(c.nif):"")}
 async function loadCompanies(){const d=await api("/api/companies?limit=500");state.companies=d.companies||[];$("companyCount").textContent=state.companies.length;if(state.selected)state.selected=state.companies.find(c=>c.id===state.selected.id)||null;renderWorkQueue();renderSavedCompanies();renderSabiQueue();renderRejected();await renderPotentialClients();if(state.selected)renderIdentification()}
 function renderWorkQueue(){const root=$("workQueue");if(!root)return;const pending=state.companies.filter(c=>c.qualification_status==="pending").length;const sabi=state.companies.filter(c=>c.qualification_status==="approved"&&c.contact_research_status==="sabi_pending").length;const people=state.companies.filter(c=>c.qualification_status==="approved"&&c.contact_research_status==="linkedin_pending").length;root.innerHTML='<div class="row"><b>Fila de trabalho</b><span class="muted small">Ações que dependem de análise ou validação</span></div><div class="grid" style="margin-top:10px"><button class="secondary" type="button" data-queue="identification">'+pending+' empresas por qualificar</button><button class="secondary" type="button" data-queue="identification">'+people+' empresas para pesquisar decisores</button><button class="secondary" type="button" data-queue="identification">'+sabi+' NIFs pendentes no SABI</button></div>';root.querySelectorAll("[data-queue]").forEach(b=>b.onclick=()=>switchTab(b.dataset.queue));}
 function renderSavedCompanies(){
  const root=$("savedCompaniesList");if(!root)return;
  const rows=state.companies.filter(c=>c.qualification_status!=="rejected"&&!c.potential_client_at).sort((a,b)=>(a.qualification_status==="approved"?-1:0)-(b.qualification_status==="approved"?-1:0)||String(b.last_seen_at||"").localeCompare(String(a.last_seen_at||"")));
- root.innerHTML=rows.length?rows.map(c=>{
-  const companyUrl=c.linkedin_company_url||("https://www.linkedin.com/search/results/companies/?keywords="+encodeURIComponent(c.name||""));
-  const peopleUrl="https://www.linkedin.com/search/results/people/?keywords="+encodeURIComponent(c.name||"");
-  return '<div class="company '+(state.selected?.id===c.id?"selected":"")+'"><div><b>'+companyTitle(c)+'</b><div class="muted small">Qualificação: '+esc(labelStatus(c.qualification_status))+' · Pesquisa de decisores: '+esc(c.contact_research_status||"Por iniciar")+'</div></div><div class="row" style="justify-content:flex-end"><a class="fit" href="'+esc(companyUrl)+'" target="_blank" rel="noopener noreferrer"><button class="secondary" type="button">LinkedIn empresa</button></a>'+(c.qualification_status==="approved"?'<a class="fit" href="'+esc(peopleUrl)+'" target="_blank" rel="noopener noreferrer"><button class="secondary" type="button">Pesquisar decisores</button></a>':'')+'<button class="fit" data-open-saved="'+esc(c.id)+'" type="button">Ficha</button></div></div>';
- }).join(""):'<p class="muted">Não existem empresas pendentes de identificação.</p>';
- root.querySelectorAll("[data-open-saved]").forEach(b=>b.onclick=()=>{selectCompany(b.dataset.openSaved);switchTab("identification")});
+ root.innerHTML=rows.length?rows.map((c,i)=>{
+  const active=state.selected?.id===c.id;
+  const stage=c.qualification_status==="approved"?"Empresa aprovada":c.qualification_status==="pending"?"Por qualificar":labelStatus(c.qualification_status);
+  const stageColor=c.qualification_status==="approved"?"good":"";
+  return '<article class="ident-company '+(active?"is-open":"")+'" data-ident-company="'+esc(c.id)+'">'+
+   '<button class="ident-company-head" type="button" data-toggle-ident="'+esc(c.id)+'"><span class="ident-index">'+String(i+1).padStart(2,"0")+'</span><span class="ident-company-main"><strong>'+companyTitle(c)+'</strong><small>NIF '+esc(c.nif||"—")+' · '+esc(c.municipality||c.district||"Localização não indicada")+'</small></span><span class="ident-company-state '+stageColor+'">'+esc(stage)+'</span><span class="ident-chevron">'+(active?"−":"＋")+'</span></button>'+
+   '<div class="ident-inline '+(active?"open":"")+'" id="inline-'+esc(c.id)+'"></div></article>';
+ }).join(""):'<div class="empty-state"><b>Não há empresas para identificar.</b><p class="muted small">Adiciona empresas na Pesquisa para começares a qualificação.</p></div>';
+ root.querySelectorAll("[data-toggle-ident]").forEach(b=>b.onclick=()=>{const id=b.dataset.toggleIdent;if(state.selected?.id===id){state.selected=null;renderSavedCompanies();return}openIdentificationInline(id)});
+}
+async function openIdentificationInline(id){
+ state.selected=state.companies.find(c=>c.id===id)||null;
+ renderSavedCompanies();
+ if(!state.selected)return;
+ await renderIdentification();
+ const slot=$("inline-"+id);if(!slot)return;
+ ["identification-overview-panel","qualification-panel","people-panel","sabi-queue-panel","sabi-import-panel"].forEach(panelId=>{const node=$(panelId);if(node)slot.appendChild(node)});
+ slot.classList.add("open");
+ const active=slot.closest(".ident-company");active?.classList.add("is-open");
 }
 function renderQualification(){const root=$("qualificationList");root.innerHTML=state.companies.map(c=>'<div class="company"><div style="flex:1"><b>'+companyTitle(c)+'</b><div class="muted small">'+esc(c.sector||"Setor não indicado")+' · '+esc(labelStatus(c.qualification_status))+'</div><div id="evidence-'+esc(c.id)+'" class="small muted" style="margin-top:8px"></div></div><div class="row"><button class="secondary" data-select-company="'+esc(c.id)+'">Selecionar</button><button class="secondary" data-evidence="'+esc(c.id)+'">Ver contratos</button><button data-qual="approved" data-id="'+esc(c.id)+'">Aprovar</button><button class="danger" data-qual="rejected" data-id="'+esc(c.id)+'">Rejeitar</button></div></div>').join("")||'<p class="muted">Sem empresas para qualificar.</p>';root.querySelectorAll("[data-select-company]").forEach(b=>b.onclick=()=>selectCompany(b.dataset.selectCompany));root.querySelectorAll("[data-evidence]").forEach(b=>b.onclick=async()=>{const target=$("evidence-"+b.dataset.evidence);target.textContent="A consultar contratos…";try{const d=await api("/api/companies/"+encodeURIComponent(b.dataset.evidence)+"/procurements");const x=d.summary||{};const rows=d.procurements||[];const cpvs=d.top_cpv||[];const authorities=d.top_authorities||[];target.innerHTML='<b>'+esc(x.total_contracts||0)+' contratos registados</b> · Valor adjudicado: '+esc(Number(x.total_value||0).toLocaleString("pt-PT",{style:"currency",currency:"EUR"}))+' · Mais recente: '+esc(x.latest_date||"—")+(cpvs.length?'<div><b>CPV principais</b><ul>'+cpvs.map(v=>'<li>'+esc(v.cpv)+' · '+esc(v.contracts)+' contratos</li>').join('')+'</ul></div>':'')+(authorities.length?'<div><b>Entidades adjudicantes principais</b><ul>'+authorities.map(v=>'<li>'+esc(v.contracting_authority)+' · '+esc(v.contracts)+' contratos</li>').join('')+'</ul></div>':'')+(rows.length?'<b>Contratos recentes</b><ul>'+rows.map(p=>'<li><b>'+esc(participantLabel(p.participant_role))+'</b> · '+(p.publication_date?"Data do contrato "+esc(p.publication_date):"Data n/d")+' · '+esc(p.description||p.procedure_type||"Contrato")+' · '+esc(p.contracting_authority||"Entidade não indicada")+' · '+esc(p.contract_value==null?"Valor n/d":Number(p.contract_value).toLocaleString("pt-PT",{style:"currency",currency:"EUR"}))+(p.cpv?" · CPV "+esc(p.cpv):"")+'</li>').join("")+'</ul>':'<div>Sem contratos associados.</div>');}catch(e){target.textContent=e.message}});root.querySelectorAll("[data-qual]").forEach(b=>b.onclick=async()=>{const notes=prompt("Notas de qualificação (opcional):")??"";try{await api("/api/companies/"+encodeURIComponent(b.dataset.id)+"/qualification",{method:"PATCH",body:JSON.stringify({status:b.dataset.qual,notes})});await loadCompanies();showStatus("Qualificação guardada.");}catch(e){showStatus(e.message,"status error")}})}function renderCommercial(){const root=$("commercialPanel"),c=state.selected;if(!c){root.textContent="Seleciona uma empresa na pesquisa.";return}root.innerHTML='<b>'+companyTitle(c)+'</b><div class="fields" style="margin-top:14px">'+field("É cliente atual?","customer_status",c.customer_status)+field("Já foi contactada?","contacted_status",c.contacted_status)+field("Tem processo comercial ativo?","active_process_status",c.active_process_status)+'</div><div class="field" style="margin-top:12px"><label>Notas comerciais</label><textarea id="commercialNotes">'+esc(c.commercial_notes||"")+'</textarea></div><div class="field" style="margin-top:12px"><label>Decisão comercial</label><select id="commercialStatus"><option value="pending_review">Por verificar</option><option value="eligible">Elegível para prospeção</option><option value="not_contact">Não contactar</option></select></div><button id="saveCommercial" style="margin-top:12px">Guardar verificação</button><div class="small muted" style="margin-top:8px"><div id="commercialHistory" class="panel" style="margin-top:16px"><b>Histórico</b><div class="small muted">A carregar…</div></div>A elegibilidade exige cliente = Não e processo ativo = Não. A decisão é sempre manual.</div>'; $("commercialStatus").value=c.commercial_status;loadCompanyHistory(c.id); $("saveCommercial").onclick=async()=>{try{await api("/api/companies/"+encodeURIComponent(c.id)+"/commercial-check",{method:"PATCH",body:JSON.stringify({customer_status:$("customer_status").value,contacted_status:$("contacted_status").value,active_process_status:$("active_process_status").value,commercial_status:$("commercialStatus").value,notes:$("commercialNotes").value})});await loadCompanies();showStatus("Verificação comercial guardada.");}catch(e){showStatus(e.message,"status error")}}}
 async function loadCompanyHistory(companyId){const target=$("commercialHistory");if(!target)return;try{const d=await api("/api/companies/events?company_id="+encodeURIComponent(companyId));const events=d.events||[];target.innerHTML="<b>Histórico</b>"+(events.length?events.map(e=>'<div class="small muted" style="margin-top:7px">' + esc(new Date(e.created_at).toLocaleString("pt-PT")) + " · " + esc(e.summary) + "</div>").join(""):'<div class="small muted">Ainda sem histórico.</div>')}catch(e){target.textContent="Não foi possível carregar o histórico: "+e.message}}
@@ -237,7 +290,7 @@ async function renderIdentification(){
  await loadProcurementHistory(procurementMonths);
  renderPeople();renderSabiQueue();
 }
-function switchTab(tab){state.tab=tab;document.querySelectorAll(".tabview").forEach(el=>el.classList.add("hidden"));$("tab-"+tab).classList.remove("hidden");document.querySelectorAll(".nav").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));$("topTitle").textContent=({search:"Pesquisa de empresas",identification:"Identificação",potential:"Potenciais clientes",rejected:"Rejeitados"})[tab]||tab;if(tab==="identification")renderIdentification();if(tab==="potential")renderPotentialClients();if(tab==="rejected")renderRejected()}
+function switchTab(tab){state.tab=tab;document.querySelectorAll(".tabview").forEach(el=>el.classList.add("hidden"));$("tab-"+tab).classList.remove("hidden");document.querySelectorAll(".nav").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));$("topTitle").textContent=({search:"Pesquisa de empresas",identification:"Identificação",potential:"Potenciais clientes",rejected:"Rejeitados"})[tab]||tab;if(tab==="identification"){renderSavedCompanies();if(state.selected)openIdentificationInline(state.selected.id);}if(tab==="potential")renderPotentialClients();if(tab==="rejected")renderRejected()}
 function renderRejected(){
  const root=$("rejectedCompaniesList");if(!root)return;
  const rows=state.companies.filter(c=>c.qualification_status==="rejected");
