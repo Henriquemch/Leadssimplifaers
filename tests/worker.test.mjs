@@ -61,7 +61,11 @@ test("mutating API rejects requests without the configured origin", async () => 
 test("health is public and reports D1 binding", async () => {
   const response = await app.fetch(new Request("https://leadpilot.test/health"), env);
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { ok: true, service: "leadpilot-api", database_configured: true });
+  const data = await response.json();
+  assert.equal(data.ok, true);
+  assert.equal(data.database_configured, true);
+  assert.equal(data.schema_check.linkedin_status, true);
+  assert.equal(data.schema_check.contact_research_status, true);
 });
 
 test("company list rejects missing credentials", async () => {
