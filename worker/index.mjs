@@ -73,7 +73,7 @@ export default {
     if (request.method === "GET" && url.pathname === "/health") {
       if (!env.DB) return json({ ok: false, service: "leadpilot-api", database_configured: false }, 503);
       try {
-        const columns = await env.DB.prepare("PRAGMA table_info(companies)").all();
+        const columns = await env.DB.prepare("PRAGMA table_info(companies)").bind().all();
         const names = new Set((columns.results || []).map(column => column.name));
         const required = ["linkedin_company_url", "linkedin_status", "contact_research_status", "lead_source", "potential_client_at"];
         return json({ ok: true, service: "leadpilot-api", database_configured: true, schema_check: Object.fromEntries(required.map(name => [name, names.has(name)])) });
