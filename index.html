@@ -213,6 +213,7 @@ async function loadCompanies(){const d=await api("/api/companies?limit=500");sta
 function renderWorkQueue(){const root=$("workQueue");if(!root)return;const pending=state.companies.filter(c=>c.qualification_status==="pending").length;const sabi=state.companies.filter(c=>c.qualification_status==="approved"&&c.contact_research_status==="sabi_pending").length;const people=state.companies.filter(c=>c.qualification_status==="approved"&&c.contact_research_status==="linkedin_pending").length;root.innerHTML='<div class="row"><b>Fila de trabalho</b><span class="muted small">Ações que dependem de análise ou validação</span></div><div class="grid" style="margin-top:10px"><button class="secondary" type="button" data-queue="identification">'+pending+' empresas por qualificar</button><button class="secondary" type="button" data-queue="identification">'+people+' empresas para pesquisar decisores</button><button class="secondary" type="button" data-queue="identification">'+sabi+' NIFs pendentes no SABI</button></div>';root.querySelectorAll("[data-queue]").forEach(b=>b.onclick=()=>switchTab(b.dataset.queue));}
 function renderSavedCompanies(){
  const root=$("savedCompaniesList");if(!root)return;
+ const host=$("tab-identification");["identification-overview-panel","qualification-panel","people-panel","sabi-queue-panel","sabi-import-panel"].forEach(id=>{const node=$(id);if(node&&host&&!host.contains(node))host.appendChild(node)});
  const rows=state.companies.filter(c=>c.qualification_status!=="rejected"&&!c.potential_client_at).sort((a,b)=>(a.qualification_status==="approved"?-1:0)-(b.qualification_status==="approved"?-1:0)||String(b.last_seen_at||"").localeCompare(String(a.last_seen_at||"")));
  root.innerHTML=rows.length?rows.map((c,i)=>{
   const active=state.selected?.id===c.id;
@@ -283,6 +284,16 @@ async function renderIdentification(){
    const table='<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;margin-top:8px"><thead><tr><th align="left">Data</th><th align="left">Contrato / objeto</th><th align="left">Entidade</th><th align="right">Valor</th><th>CPV</th></tr></thead><tbody>'+historyRows+'</tbody></table></div>';
    const more=d.has_more?'<button id="loadMoreProcurements" class="secondary" type="button" style="margin-top:10px">Carregar mais 50 adjudicações</button>':'';
    root.innerHTML=header+table+more;
+   const monthMap=new Map();
+   procurementRows.forEach(p=>{const raw=String(p.publication_date||"");const m=raw.match(/^(\\d{4})[-/](\\d{1,2})/);if(!m)return;const key=m[1]+"-"+String(m[2]).padStart(2,"0");monthMap.set(key,(monthMap.get(key)||0)+1)});
+   const monthsData=[...monthMap.entries()].sort((a,b)=>a[0].localeCompare(b[0])).slice(-12);
+   const maxMonth=Math.max(1,...monthsData.map(x=>x[1]));
+   const points=monthsData.map((x,i)=>{const px=18+(monthsData.length<2?0:i*264/(monthsData.length-1));const py=92-(x[1]/maxMonth)*66;return px+","+py}).join(" ");
+   const monthLabels=monthsData.map(x=>'<span>'+esc(x[0].slice(5)+"/"+x[0].slice(2,4))+'</span>').join("");
+   const cpvBars=cpvs.slice(0,5).map(v=>{const n=Number(v.contracts||0),w=Math.max(3,n/Math.max(1,...cpvs.map(z=>Number(z.contracts||0)))*100);return '<div class="ident-bar-row"><span>'+esc(v.cpv)+'</span><div class="ident-bar-track"><div class="ident-bar-fill" style="width:'+w+'%"></div></div><b>'+n+'</b></div>'}).join("");
+   const authorityBars=auth.slice(0,5).map(v=>{const n=Number(v.contracts||0),w=Math.max(3,n/Math.max(1,...auth.map(z=>Number(z.contracts||0)))*100);return '<div class="ident-bar-row"><span title="'+esc(v.contracting_authority)+'">'+esc(v.contracting_authority)+'</span><div class="ident-bar-track"><div class="ident-bar-fill" style="width:'+w+'%"></div></div><b>'+n+'</b></div>'}).join("");
+   const visual='<div class="ident-chart"><div class="ident-chart-title">Ritmo de contratação · contratos por mês</div>'+(monthsData.length?'<svg viewBox="0 0 300 112" role="img" aria-label="Evolução mensal dos contratos"><path d="M18 92 H282" stroke="#30435f" stroke-width="1" fill="none"/><polyline points="'+points+'" fill="none" stroke="#83a7ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'+monthsData.map((x,i)=>{const px=18+(monthsData.length<2?0:i*264/(monthsData.length-1));const py=92-(x[1]/maxMonth)*66;return '<circle cx="'+px+'" cy="'+py+'" r="3.5" fill="#9bb8ff"/>'}).join("")+'</svg><div class="ident-chart-legend">'+monthLabels+'</div>':'<div class="muted small">Ainda não há datas suficientes para desenhar a evolução mensal.</div>')+'</div><div class="fields"><div class="ident-chart"><div class="ident-chart-title">CPV com maior atividade</div><div class="ident-bars">'+(cpvBars||'<span class="muted small">Sem CPV disponíveis.</span>')+'</div></div><div class="ident-chart"><div class="ident-chart-title">Entidades adjudicantes principais</div><div class="ident-bars">'+(authorityBars||'<span class="muted small">Sem entidades disponíveis.</span>')+'</div></div></div>';
+   root.insertAdjacentHTML("afterbegin",visual);
    $("procurementMonths").onchange=()=>loadProcurementHistory(Number($("procurementMonths").value),0,false);
    if(d.has_more){$("loadMoreProcurements").onclick=async()=>{const btn=$("loadMoreProcurements");btn.disabled=true;await loadProcurementHistory(months,offset+rows.length,true);};}
   }catch(e){root.textContent="Não foi possível carregar o resumo da contratação pública: "+e.message}
@@ -358,35 +369,3 @@ async function searchDiscovery(){
  if(q)params.set("q",q);if(activity)params.set(mode==="cpv"?"cpv":"sector",activity);if(min)params.set("min_value",min);if(max)params.set("max_value",max);if(role)params.set("role",role);
  if(period){const since=new Date();since.setMonth(since.getMonth()-Number(period));params.set("from_date",since.toISOString().slice(0,10));}params.set("limit","30");
  const root=$("discoveryResults");root.innerHTML='<p class="muted">A pesquisar no índice BASE…</p>';
- try{const d=await api("/api/discovery/search?"+params.toString());const rows=d.companies||[];
- if(!rows.length){root.innerHTML='<p class="muted">Não foram encontradas empresas com estes critérios. Empresas já adicionadas ou excluídas são automaticamente omitidas.</p>';return}
- root.innerHTML='<div class="muted small">'+rows.length+' empresas encontradas · máximo 30</div>'+rows.map(x=>'<div class="company"><div><b>'+esc(x.name)+'</b><div class="muted small">NIF '+esc(x.nif)+' · '+esc(x.evidence_type)+'</div><div class="pill">'+esc(x.awardee_contract_count)+' contratos ganhos</div><div class="pill">'+esc(x.competitor_contract_count)+' participações como concorrente</div><div class="pill">'+Number(x.awarded_value_total||0).toLocaleString("pt-PT",{style:"currency",currency:"EUR"})+' adjudicados</div><div class="muted small">Último contrato: '+esc(x.latest_contract_date||"—")+'</div></div><div class="row"><button class="secondary" data-copy-nif="'+esc(x.nif)+'">Copiar NIF</button><button class="danger" data-disqualify="'+esc(x.nif)+'">Excluir da descoberta</button><button data-add-lead="'+esc(x.nif)+'">Adicionar lead</button></div></div>').join("");
- root.querySelectorAll("[data-copy-nif]").forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(b.dataset.copyNif);b.textContent="NIF copiado"}catch(e){showStatus("NIF: "+b.dataset.copyNif,"status error")}});
- root.querySelectorAll("[data-disqualify]").forEach(b=>b.onclick=async()=>{const nif=b.dataset.disqualify;if(!confirm("Excluir esta empresa das próximas pesquisas? O NIF/nome ficam guardados para impedir futuras duplicações."))return;b.disabled=true;try{await api("/api/discovery/disqualify",{method:"POST",body:JSON.stringify({nif})});await searchDiscovery();showStatus("Empresa excluída das próximas pesquisas. Registo anti-duplicados preservado.","status success")}catch(e){b.disabled=false;showStatus(e.message,"status error")}});
- root.querySelectorAll("[data-add-lead]").forEach(b=>b.onclick=async()=>{b.disabled=true;try{const added=await api("/api/leads",{method:"POST",body:JSON.stringify({nif:b.dataset.addLead})});b.textContent="Adicionado";showStatus("Empresa adicionada ao pipeline de leads.","status success");await loadCompanies();selectCompany(added.company_id);switchTab("identification");}catch(e){b.disabled=false;showStatus(e.message,"status error")}});
- }catch(e){root.innerHTML='<p class="muted">Pesquisa indisponível: '+esc(e.message)+'</p>'}
-}
-
-async function loadExclusions(){
- const root=$("exclusionList");root.textContent="A carregar…";
- try{
-  const d=await api("/api/admin/exclusions");const rows=d.exclusions||[];
-  root.innerHTML=rows.length?rows.map(x=>'<div class="company"><div><b>'+esc(x.company_name||"Empresa sem nome")+'</b><div class="muted small">NIF '+esc(x.nif)+' · '+esc(x.reason)+' · '+(x.active?"Ativa":"Inativa")+'</div><div class="muted small">'+esc(x.notes||"Sem notas")+'</div></div><div><button class="secondary" data-exclusion="'+esc(x.nif)+'" data-active="'+(x.active?"1":"0")+'">'+(x.active?"Desativar":"Reativar")+'</button></div></div>').join(""):'<p class="muted">Ainda não existem exclusões.</p>';
-  root.querySelectorAll("[data-exclusion]").forEach(b=>b.onclick=async()=>{try{await api("/api/admin/exclusions/"+encodeURIComponent(b.dataset.exclusion),{method:"PATCH",body:JSON.stringify({active:b.dataset.active!=="1"})});await loadExclusions()}catch(e){$("exclusionStatus").textContent=e.message}});
- }catch(e){root.textContent="Erro: "+e.message}
-}
-$("addExclusion").onclick=async()=>{
- const status=$("exclusionStatus");status.textContent="A guardar…";
- try{
-  await api("/api/admin/exclusions",{method:"POST",body:JSON.stringify({nif:$("excludeNif").value,company_name:$("excludeName").value,reason:$("excludeReason").value,notes:$("excludeNotes").value})});
-  status.textContent="Exclusão guardada. O NIF deixa de aparecer na pesquisa BASE.";
-  $("excludeNif").value="";$("excludeName").value="";$("excludeNotes").value="";
-  await loadExclusions();
- }catch(e){status.textContent=e.message}
-};
-$("refreshExclusions").onclick=loadExclusions;
-
-$("searchBtn").onclick=searchDiscovery;
-document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
-boot();
-</script></body></html>
