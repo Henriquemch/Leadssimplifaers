@@ -230,7 +230,7 @@ function renderSavedCompanies(){
  root.innerHTML=rows.length?rows.map((c,i)=>{
   const active=state.selected?.id===c.id;
   return '<article class="ident-company '+(active?"is-open":"")+'" data-ident-company="'+esc(c.id)+'">'+
-   '<button class="ident-company-head" type="button" data-toggle-ident="'+esc(c.id)+'"><span class="ident-index">'+String(i+1).padStart(2,"0")+'</span><span class="ident-company-main"><strong>'+companyTitle(c)+'</strong><small>NIF '+esc(c.nif||"—")+' · '+esc(c.municipality||c.district||"Localização não indicada")+'</small></span><span class="ident-company-state '+stageColor+'">'+esc(stage)+'</span><span class="ident-chevron">'+(active?"−":"＋")+'</span></button>'+
+   '<button class="ident-company-head" type="button" data-toggle-ident="'+esc(c.id)+'"><span class="ident-index">'+String(i+1).padStart(2,"0")+'</span><span class="ident-company-main"><strong>'+companyTitle(c)+'</strong><small>NIF '+esc(c.nif||"—")+' · '+esc(c.municipality||c.district||"Localização não indicada")+'</small></span><span class="ident-chevron">'+(active?"−":"＋")+'</span></button>'+
    '<div class="ident-inline '+(active?"open":"")+'" id="inline-'+esc(c.id)+'"></div></article>';
  }).join(""):'<div class="empty-state"><b>Não há empresas para identificar.</b><p class="muted small">Adiciona empresas na Pesquisa para começares a qualificação.</p></div>';
  root.querySelectorAll("[data-toggle-ident]").forEach(b=>b.onclick=()=>{const id=b.dataset.toggleIdent;if(state.selected?.id===id){state.selected=null;renderSavedCompanies();return}openIdentificationInline(id)});
