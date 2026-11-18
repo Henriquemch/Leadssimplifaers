@@ -51,6 +51,80 @@ input,select,textarea{border-color:#dfe4ed;border-radius:8px;padding:10px 11px;f
 }
 @media(max-width:900px){.content{padding:22px 20px 42px}.sidebar{width:218px}}
 @media(max-width:680px){.content{padding:18px 13px 34px}.top{padding:11px 13px}.heading{font-size:22px}.section-jump{top:54px}.section-jump button{font-size:11px;padding:8px 9px}#savedCompaniesList{max-height:300px}}
+
+/* LeadPilot Dark Pro — visual system */
+:root{
+ color-scheme:dark;
+ --ink:#e8edf8;--muted:#8d9ab2;--line:#26344c;--accent:#7195ff;--navy:#0b1220;
+ font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+ background:#080e19;color:var(--ink)
+}
+html{background:#080e19}
+body{background:radial-gradient(ellipse at 78% -12%,#172746 0%,#0b1322 42%,#080e19 78%);color:var(--ink);min-height:100vh}
+.shell{background:transparent}
+.sidebar{width:246px;background:linear-gradient(180deg,#0d1728 0%,#0a1220 100%);border-right:1px solid #1e2b40;padding:27px 16px;box-shadow:12px 0 35px #0002}
+.logo{font-size:25px;letter-spacing:-1.25px;color:#f4f7ff;margin:0 12px 42px}
+.logo span{color:#7da2ff}
+.nav{color:#9eacc3;background:transparent;border:1px solid transparent;border-radius:10px;padding:12px 13px;margin:5px 0;font-weight:600;transition:all .18s}
+.nav:hover:not(:disabled){background:#17243a;color:#eaf0ff}
+.nav.active{background:linear-gradient(100deg,#20365c,#172946);color:#fff;box-shadow:inset 3px 0 #7da2ff,0 5px 18px #0002;border-color:#2a4167}
+.main{min-width:0}
+.top{background:rgba(10,17,30,.86);border-bottom:1px solid #1f2c42;color:#94a4bf;padding:15px 32px;backdrop-filter:blur(16px)}
+.top b{color:#eaf0ff}
+.content{max-width:1540px;padding:30px 36px 60px}
+.eyebrow{color:#83a4ff;letter-spacing:1.35px;font-size:10px}
+.heading{color:#f3f6ff;font-size:29px;letter-spacing:-1px;font-weight:780}
+.muted{color:#91a0b8}
+.small{color:#8998b1}
+.panel,.card{background:linear-gradient(145deg,rgba(20,31,50,.96),rgba(14,24,40,.98));border:1px solid #263650;border-radius:15px;padding:20px;margin:15px 0;box-shadow:0 12px 32px #0002,inset 0 1px #ffffff08}
+.panel>b,.panel .row>b{color:#eaf0ff;font-size:14px}
+.grid{gap:14px}
+.grid .card{background:linear-gradient(145deg,#182943,#121f33);border:1px solid #2a3c59;color:#aab8ce;margin:13px 0 8px;padding:17px 19px}
+.num{color:#f4f7ff;font-size:28px;letter-spacing:-.8px}
+button{background:linear-gradient(135deg,#4778f5,#315bd0);color:white;border:1px solid #6388f6;border-radius:9px;padding:10px 14px;box-shadow:0 5px 16px #234bb52b}
+button:hover:not(:disabled){background:linear-gradient(135deg,#5b89ff,#3d68e3);transform:translateY(-1px)}
+button.secondary{background:#1b2940;color:#c2cde0;border:1px solid #30435f;box-shadow:none}
+button.secondary:hover:not(:disabled){background:#263853;color:#fff}
+button.danger{background:#3a202a;color:#ffb7c1;border-color:#61303e}
+input,select,textarea{background:#0d1829;color:#e6edfa;border:1px solid #2b3b55;border-radius:9px;padding:11px 12px}
+input::placeholder,textarea::placeholder{color:#667791}
+input:focus,select:focus,textarea:focus{border-color:#7195ff;box-shadow:0 0 0 3px #4778f52b;background:#101d31}
+select option{background:#101a2b;color:#e6edfa}
+.field label{color:#aebbd0;font-size:11px;letter-spacing:.2px}
+.company{border-top:1px solid #26344b;color:#e2eaf8;padding:14px 10px}
+.company:hover,.company.selected{background:#1a2b46;border-radius:10px}
+.pill{background:#21324e;color:#b9caff;border:1px solid #31496e;border-radius:20px}
+.tabs{gap:7px}
+.tab{background:#17253b;color:#aab9d0;border:1px solid #2a3d5b}
+.tab.active{background:#294a82;color:#fff;border-color:#466db4}
+.notice{background:#382d1b;color:#f4d69a;border:1px solid #65502a}
+.status{background:#182a46;color:#b8ceff;border:1px solid #2e4a78}
+.error{background:#3b2029;color:#ffb8c1;border-color:#6c3342}
+.success{background:#15372e;color:#9be2c3;border-color:#28634f}
+.login{background:linear-gradient(145deg,#17263e,#101a2c);border:1px solid #304563;color:#edf3ff;box-shadow:0 25px 80px #0008}
+.login h1{color:#f5f7ff}
+.login .muted{color:#9aaac3}
+.section-jump{background:rgba(13,23,39,.94);border:1px solid #2b3e5c;box-shadow:0 8px 24px #0004}
+.section-jump button{color:#aebbd0}
+.section-jump button:hover{background:#1d3150;color:#fff}
+#procurementSummary th{background:#17263d;color:#b8c7dd}
+#procurementSummary td{border-top:1px solid #273750;color:#d7e1f1}
+a{color:#8eafff}
+hr{border:0;border-top:1px solid #293952}
+:focus-visible{outline:2px solid #83a4ff;outline-offset:2px}
+@media(max-width:900px){.sidebar{width:218px}.content{padding:24px 22px 46px}}
+@media(max-width:680px){
+ body{background:#080e19}
+ .sidebar{width:100%;background:#0d1728;border-right:0;border-bottom:1px solid #263650;padding:12px 10px}
+ .logo{font-size:20px;margin:0 10px 0 3px}
+ .nav{padding:9px 10px;font-size:12px}
+ .top{padding:12px 14px}
+ .content{padding:20px 13px 38px}
+ .heading{font-size:23px}
+ .panel,.card{padding:15px}
+ .section-jump{background:rgba(13,23,39,.97)}
+}
+
 </style></head><body>
 <div id="login" class="login hidden"><div class="eyebrow">LEADPILOT · ACESSO PRIVADO</div><h1>Entrar na plataforma</h1><p class="muted">Acesso reservado. A sessão é protegida pelo servidor.</p><form id="loginForm"><div class="field"><label for="password">Palavra-passe</label><input id="password" type="password" autocomplete="current-password" required></div><p><button type="submit">Entrar</button></p></form><div id="loginStatus" class="status hidden"></div></div>
 <div id="app" class="shell hidden"><aside class="sidebar"><div class="logo">lead<span>pilot</span></div>
