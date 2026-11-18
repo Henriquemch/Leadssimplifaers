@@ -197,8 +197,8 @@ export default {
         const nif = typeof item?.nif === "string" ? item.nif.replace(/[^0-9]/g, "") : "";
         const fullName = typeof item?.full_name === "string" ? item.full_name.trim() : "";
         if (!/^\d{9}$/.test(nif) || !fullName) { skipped++; continue; }
-        const found = await env.DB.prepare("SELECT id, qualification_status FROM companies WHERE nif = ? LIMIT 1").bind(nif).first();
-        if (!found || found.qualification_status !== "approved") { skipped++; continue; }
+        const found = await env.DB.prepare("SELECT id FROM companies WHERE nif = ? LIMIT 1").bind(nif).first();
+        if (!found) { skipped++; continue; }
         const title = typeof item.job_title === "string" ? item.job_title.trim().slice(0, 120) : "";
         const duplicate = await env.DB.prepare("SELECT id FROM decision_makers WHERE company_id = ? AND full_name = ? AND COALESCE(job_title,'') = ? AND provider = 'SABI' LIMIT 1")
           .bind(found.id, fullName.slice(0, 160), title).first();
