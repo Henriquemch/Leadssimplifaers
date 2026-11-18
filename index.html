@@ -373,8 +373,8 @@ async function renderPotentialClients(){
 $("selectAllPotential").onchange=async()=>{const d=await api("/api/potential-clients");const ids=[...new Set((d.records||[]).map(x=>x.id))];state.potentialSelected=$("selectAllPotential").checked?ids:[];await renderPotentialClients()};
 $("deleteSelectedPotential").onclick=async()=>{
  const ids=[...state.potentialSelected];if(!ids.length)return;
- const selected=ids.map(id=>{const c=state.companies.find(x=>x.id===id);return {id,nif:String(c?.nif||"").replace(/\\D/g,"")}}); 
- if(selected.some(x=>!/^\\d{9}$/.test(x.nif))){showStatus("Uma ou mais empresas não têm NIF válido. Nenhum registo foi eliminado.","status error");return}
+ const selected=ids.map(id=>{const c=state.companies.find(x=>x.id===id);return {id,nif:String(c?.nif||"").replace(/\D/g,"")}}); 
+ if(selected.some(x=>!/^[\d]{9}$/.test(x.nif))){showStatus("Uma ou mais empresas não têm NIF válido. Nenhum registo foi eliminado.","status error");return}
  if(!confirm("Tens a certeza de que queres eliminar "+selected.length+" empresa(s) de Potenciais clientes? Esta ação remove os registos do pipeline, mas preserva o NIF no registo anti-duplicados."))return;
  const button=$("deleteSelectedPotential");button.disabled=true;button.textContent="A eliminar…";let deleted=0;const errors=[];
  for(const item of selected){try{await api("/api/leads/"+item.nif,{method:"DELETE"});deleted++}catch(e){errors.push(item.nif+": "+e.message)}}
