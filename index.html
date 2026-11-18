@@ -358,3 +358,45 @@ $("copySabiNifs").onclick=async()=>{const rows=state.companies.filter(c=>c.quali
 $("importSabiCsv").onclick=importSabiCsv;
 $("refreshPotential").onclick=renderPotentialClients;
 $("refreshRejected").onclick=async()=>{await loadCompanies();renderRejected()};
+async function boot(){try{const d=await api("/auth/session");if(!d.authenticated){$("login").classList.remove("hidden");return}$("app").classList.remove("hidden");showStatus("Sessão autenticada. A carregar dados guardados.");await loadCompanies();showStatus("Ligação autenticada. Os registos apresentados vêm da base de dados.");}catch(e){$("app").classList.remove("hidden");showStatus("Modo de pré-visualização: API ainda não ligada. Os separadores estão disponíveis, mas pesquisa, gravação e autenticação ficam inativas até configurar o servidor.", "status");$("discoveryResults").innerHTML='<p class="muted">A base de dados ainda não está ligada. Não existem registos disponíveis nesta pré-visualização.</p>';$("companyCount").textContent="—";$("peopleCount").textContent="—"}}
+$("loginForm").onsubmit=async e=>{e.preventDefault();const status=$("loginStatus");status.classList.remove("hidden");status.textContent="A validar acesso…";try{await api("/auth/login",{method:"POST",body:JSON.stringify({password:$("password").value})});$("login").classList.add("hidden");$("app").classList.remove("hidden");await loadCompanies();showStatus("Sessão iniciada.");}catch(err){status.textContent=err.message}};
+$("logout").onclick=async()=>{try{await api("/auth/logout",{method:"POST"})}finally{location.reload()}};
+$("refreshSavedCompanies").onclick=async()=>{try{await loadCompanies();showStatus("Lista de empresas atualizada.")}catch(e){showStatus("Não foi possível atualizar a lista: "+e.message,"status error")}};
+$("discoveryActivityMode").onchange=()=>{$("discoveryActivityLabel").textContent=$("discoveryActivityMode").value==="cpv"?"Código CPV":"Setor / atividade";$("discoveryActivity").placeholder=$("discoveryActivityMode").value==="cpv"?"Ex.: 45000000 ou 45000000-7":"Ex.: limpeza, construção, informática"};
+async function searchDiscovery(){
+ const params=new URLSearchParams(); const q=$("discoveryQuery").value.trim(),activity=$("discoveryActivity").value.trim(),mode=$("discoveryActivityMode").value,min=$("discoveryMin").value,max=$("discoveryMax").value,role=$("discoveryRole").value,period=$("discoveryPeriod").value;
+ if(q)params.set("q",q);if(activity)params.set(mode==="cpv"?"cpv":"sector",activity);if(min)params.set("min_value",min);if(max)params.set("max_value",max);if(role)params.set("role",role);
+ if(period){const since=new Date();since.setMonth(since.getMonth()-Number(period));params.set("from_date",since.toISOString().slice(0,10));}params.set("limit","30");
+ const root=$("discoveryResults");root.innerHTML='<p class="muted">A pesquisar no índice BASE…</p>';
+ try{const d=await api("/api/discovery/search?"+params.toString());const rows=d.companies||[];
+ if(!rows.length){root.innerHTML='<p class="muted">Não foram encontradas empresas com estes critérios. Empresas já adicionadas ou excluídas são automaticamente omitidas.</p>';return}
+ root.innerHTML='<div class="muted small">'+rows.length+' empresas encontradas · máximo 30</div>'+rows.map(x=>'<div class="company"><div><b>'+esc(x.name)+'</b><div class="muted small">NIF '+esc(x.nif)+' · '+esc(x.evidence_type)+'</div><div class="pill">'+esc(x.awardee_contract_count)+' contratos ganhos</div><div class="pill">'+esc(x.competitor_contract_count)+' participações como concorrente</div><div class="pill">'+Number(x.awarded_value_total||0).toLocaleString("pt-PT",{style:"currency",currency:"EUR"})+' adjudicados</div><div class="muted small">Último contrato: '+esc(x.latest_contract_date||"—")+'</div></div><div class="row"><button class="secondary" data-copy-nif="'+esc(x.nif)+'">Copiar NIF</button><button class="danger" data-disqualify="'+esc(x.nif)+'">Excluir da descoberta</button><button data-add-lead="'+esc(x.nif)+'">Adicionar lead</button></div></div>').join("");
+ root.querySelectorAll("[data-copy-nif]").forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(b.dataset.copyNif);b.textContent="NIF copiado"}catch(e){showStatus("NIF: "+b.dataset.copyNif,"status error")}});
+ root.querySelectorAll("[data-disqualify]").forEach(b=>b.onclick=async()=>{const nif=b.dataset.disqualify;if(!confirm("Excluir esta empresa das próximas pesquisas? O NIF/nome ficam guardados para impedir futuras duplicações."))return;b.disabled=true;try{await api("/api/discovery/disqualify",{method:"POST",body:JSON.stringify({nif})});await searchDiscovery();showStatus("Empresa excluída das próximas pesquisas. Registo anti-duplicados preservado.","status success")}catch(e){b.disabled=false;showStatus(e.message,"status error")}});
+ root.querySelectorAll("[data-add-lead]").forEach(b=>b.onclick=async()=>{b.disabled=true;try{const added=await api("/api/leads",{method:"POST",body:JSON.stringify({nif:b.dataset.addLead})});b.textContent="Adicionado";showStatus("Empresa adicionada ao pipeline de leads.","status success");await loadCompanies();selectCompany(added.company_id);switchTab("identification");}catch(e){b.disabled=false;showStatus(e.message,"status error")}});
+ }catch(e){root.innerHTML='<p class="muted">Pesquisa indisponível: '+esc(e.message)+'</p>'}
+}
+
+async function loadExclusions(){
+ const root=$("exclusionList");root.textContent="A carregar…";
+ try{
+  const d=await api("/api/admin/exclusions");const rows=d.exclusions||[];
+  root.innerHTML=rows.length?rows.map(x=>'<div class="company"><div><b>'+esc(x.company_name||"Empresa sem nome")+'</b><div class="muted small">NIF '+esc(x.nif)+' · '+esc(x.reason)+' · '+(x.active?"Ativa":"Inativa")+'</div><div class="muted small">'+esc(x.notes||"Sem notas")+'</div></div><div><button class="secondary" data-exclusion="'+esc(x.nif)+'" data-active="'+(x.active?"1":"0")+'">'+(x.active?"Desativar":"Reativar")+'</button></div></div>').join(""):'<p class="muted">Ainda não existem exclusões.</p>';
+  root.querySelectorAll("[data-exclusion]").forEach(b=>b.onclick=async()=>{try{await api("/api/admin/exclusions/"+encodeURIComponent(b.dataset.exclusion),{method:"PATCH",body:JSON.stringify({active:b.dataset.active!=="1"})});await loadExclusions()}catch(e){$("exclusionStatus").textContent=e.message}});
+ }catch(e){root.textContent="Erro: "+e.message}
+}
+$("addExclusion").onclick=async()=>{
+ const status=$("exclusionStatus");status.textContent="A guardar…";
+ try{
+  await api("/api/admin/exclusions",{method:"POST",body:JSON.stringify({nif:$("excludeNif").value,company_name:$("excludeName").value,reason:$("excludeReason").value,notes:$("excludeNotes").value})});
+  status.textContent="Exclusão guardada. O NIF deixa de aparecer na pesquisa BASE.";
+  $("excludeNif").value="";$("excludeName").value="";$("excludeNotes").value="";
+  await loadExclusions();
+ }catch(e){status.textContent=e.message}
+};
+$("refreshExclusions").onclick=loadExclusions;
+
+$("searchBtn").onclick=searchDiscovery;
+document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+boot();
+</script></body></html>
