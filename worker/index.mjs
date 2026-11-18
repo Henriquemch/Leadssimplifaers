@@ -171,8 +171,10 @@ export default {
           env.DB.prepare("INSERT INTO company_events (id,company_id,event_type,summary) VALUES (?,?,'qualification_changed','Lead adicionado a partir da pesquisa BASE.')").bind(id(),companyId)
         ]);
       } catch (error) {
-        if (/unique|constraint/i.test(String(error?.message || error))) return json({ok:false,error:"Já existe um lead com este NIF."},409);
-        throw error;
+        const message = String(error?.message || error);
+        if (/unique|constraint/i.test(message)) return json({ok:false,error:"Já existe um lead com este NIF."},409);
+        console.error("Lead creation failed", error);
+        return json({ok:false,error:"Não foi possível adicionar o lead.",diagnostic:message.slice(0,500)},500);
       }
       return json({ok:true,company_id:companyId,nif},201);
     }
@@ -407,17 +409,22 @@ export default {
       const contactType = ["general", "decision_maker"].includes(body.contact_type) ? body.contact_type : "decision_maker";
       const reviewStatus = ["pending", "selected", "rejected"].includes(body.review_status) ? body.review_status : "pending";
       const personId = id();
-      await env.DB.prepare("INSERT INTO decision_makers (id, company_id, full_name, job_title, email, phone, contact_type, review_status, notes, professional_profile_url, source_url, provider) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-        .bind(personId, body.company_id, body.full_name.trim().slice(0, 160),
-          typeof body.job_title === "string" ? body.job_title.trim().slice(0, 120) : null,
-          typeof body.email === "string" ? body.email.trim().slice(0, 200) : null,
-          typeof body.phone === "string" ? body.phone.trim().slice(0, 60) : null,
-          contactType, reviewStatus,
-          typeof body.notes === "string" ? body.notes.trim().slice(0, 1000) : null,
-          typeof body.profile_url === "string" ? body.profile_url.trim().slice(0, 500) : null,
-          typeof body.source_url === "string" ? body.source_url.trim().slice(0, 500) : null,
-          typeof body.source === "string" ? body.source.trim().slice(0, 40) : "manual").run();
-      return json({ ok: true, decision_maker_id: personId }, 201);
+      try {
+        await env.DB.prepare("INSERT INTO decision_makers (id, company_id, full_name, job_title, email, phone, contact_type, review_status, notes, professional_profile_url, source_url, provider) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+          .bind(personId, body.company_id, body.full_name.trim().slice(0, 160),
+            typeof body.job_title === "string" ? body.job_title.trim().slice(0, 120) : null,
+            typeof body.email === "string" ? body.email.trim().slice(0, 200) : null,
+            typeof body.phone === "string" ? body.phone.trim().slice(0, 60) : null,
+            contactType, reviewStatus,
+            typeof body.notes === "string" ? body.notes.trim().slice(0, 1000) : null,
+            typeof body.profile_url === "string" ? body.profile_url.trim().slice(0, 500) : null,
+            typeof body.source_url === "string" ? body.source_url.trim().slice(0, 500) : null,
+            typeof body.source === "string" ? body.source.trim().slice(0, 40) : "manual").run();
+        return json({ ok: true, decision_maker_id: personId }, 201);
+      } catch (error) {
+        console.error("Decision-maker insert failed", error);
+        return json({ok:false,error:"Não foi possível guardar o decisor.",diagnostic:String(error?.message || error).slice(0,500)},500);
+      }
     }
 
     const personStatusMatch = url.pathname.match(/^\/api\/decision-makers\/([a-f0-9-]+)\/review$/);
