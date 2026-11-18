@@ -328,6 +328,15 @@ test("decision-maker research is allowed after qualification without a Dynamics 
   assert.equal(response.status, 201);
 });
 
+test("decision-maker can be registered before company qualification", async () => {
+  const response = await app.fetch(new Request("https://leadpilot.test/api/decision-makers", {
+    method: "POST",
+    headers: { cookie: await adminCookie(), origin: env.APP_ORIGIN, "content-type": "application/json" },
+    body: JSON.stringify({ company_id: "c1", full_name: "Pessoa ainda por qualificar" })
+  }), envWithCompany({ id: "c1", qualification_status: "pending", commercial_status: "pending_review", customer_status: "unknown", active_process_status: "unknown" }));
+  assert.equal(response.status, 201);
+});
+
 test("decision-maker research allowed only for explicitly eligible company", async () => {
   const response = await app.fetch(new Request("https://leadpilot.test/api/decision-makers", {
     method: "POST",
