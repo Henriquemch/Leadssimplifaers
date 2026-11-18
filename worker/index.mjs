@@ -71,7 +71,15 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (request.method === "GET" && url.pathname === "/health") {
-      return json({ ok: true, service: "leadpilot-api", database_configured: Boolean(env.DB) });
+      if (!env.DB) return json({ ok: false, service: "leadpilot-api", database_configured: false }, 503);
+      try {
+        const columns = await env.DB.prepare("PRAGMA table_info(companies)").all();
+        const names = new Set((columns.results || []).map(column => column.name));
+        const required = ["linkedin_company_url", "linkedin_status", "contact_research_status", "lead_source", "potential_client_at"];
+        return json({ ok: true, service: "leadpilot-api", database_configured: true, schema_check: Object.fromEntries(required.map(name => [name, names.has(name)])) });
+      } catch {
+        return json({ ok: false, service: "leadpilot-api", database_configured: true, schema_check: "failed" }, 500);
+      }
     }
     if (request.method === "POST" && url.pathname === "/auth/login") {
       if (!originAllowed(request, env)) return json({ ok: false, error: "Invalid origin." }, 403);
