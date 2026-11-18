@@ -274,18 +274,27 @@ async function renderPeople(){
  '<div class="muted small" style="margin-top:12px">A empresa só entra em Potenciais clientes depois de validares pelo menos um decisor.</div>';
  $("sendSabi").onclick=async()=>{
   const btn=$("sendSabi");btn.disabled=true;btn.textContent="A enviar para SABI…";
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),15000);
   try{
-   const result=await api("/api/companies/"+encodeURIComponent(c.id)+"/sabi-queue",{method:"POST"});
+   await api("/api/companies/"+encodeURIComponent(c.id)+"/sabi-queue",{method:"POST",signal:controller.signal});
+   clearTimeout(timeout);
    const current=state.companies.find(x=>x.id===c.id);
    if(current){current.contact_research_status="sabi_pending";current.linkedin_status="not_found";}
    state.selected=null;
-   await loadCompanies();
+   renderSavedCompanies();
    const host=$("tab-identification");
    ["sabi-queue-panel","sabi-import-panel"].forEach(id=>{const node=$(id);if(node&&host)host.appendChild(node)});
    renderSabiQueue();
    showStatus("Empresa enviada para SABI. Já saiu de Empresas guardadas e está na lista de NIFs pendentes.","status success");
    $("sabi-queue-panel")?.scrollIntoView({behavior:"smooth",block:"start"});
-  }catch(e){btn.disabled=false;btn.textContent="Não encontrei decisor — enviar NIF para SABI";showStatus(e.message,"status error")}
+   loadCompanies().catch(e=>showStatus("A empresa foi enviada para SABI, mas não foi possível atualizar todas as listas: "+e.message,"status error"));
+  }catch(e){
+   clearTimeout(timeout);
+   btn.disabled=false;btn.textContent="Não encontrei decisor — enviar NIF para SABI";
+   const message=e.name==="AbortError"?"A API não respondeu em 15 segundos. A transferência não foi confirmada; atualiza a lista SABI antes de voltar a tentar.":e.message;
+   showStatus(message,"status error");
+  }
  };
  $("savePerson").onclick=async()=>{const fullName=$("personName").value.trim();if(!fullName){showStatus("Indica o nome do decisor.","status error");return}try{await api("/api/decision-makers",{method:"POST",body:JSON.stringify({company_id:c.id,full_name:fullName,email:$("personEmail").value,phone:$("personPhone").value,contact_type:"decision_maker",source_url:c.linkedin_company_url||null,source:"LinkedIn",notes:$("personNotes").value})});await renderPeople();showStatus("Decisor guardado. Valida-o para o enviar para Potenciais clientes.","status success");}catch(e){showStatus(e.message,"status error")}};
  root.querySelectorAll("[data-review-person]").forEach(b=>b.onclick=async()=>{try{const result=await api("/api/decision-makers/"+encodeURIComponent(b.dataset.reviewPerson)+"/review",{method:"PATCH",body:JSON.stringify({review_status:b.dataset.status})});await loadCompanies();showStatus(result.promoted?"Decisor validado e empresa enviada para Potenciais clientes.":"Decisor marcado como rejeitado.");}catch(e){showStatus(e.message,"status error")}});
