@@ -262,6 +262,7 @@ test("SABI queue action marks an existing company as pending", async () => {
             return {
               sql, values,
               async all() {
+                if (sql.includes("SELECT id FROM companies")) return { results: [{ id: "c1" }] };
                 if (sql.includes("SELECT id, qualification_status")) return { results: [{ id: "c1", qualification_status: "approved" }] };
                 return { results: [] };
               },
