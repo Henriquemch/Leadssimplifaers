@@ -213,7 +213,7 @@ hr{border:0;border-top:1px solid #293952}
 <div class="panel" id="sabi-queue-panel"><div class="row"><div><b>Empresas sem decisor identificado — SABI</b><div class="muted small">Os NIFs das empresas que não avançaram pelo LinkedIn ficam aqui para pesquisa manual em massa no SABI.</div></div><div class="fit"><button id="copySabiNifs" class="secondary" type="button">Copiar NIFs para SABI</button></div></div><div id="sabiQueueList" class="muted small" style="margin-top:10px">Ainda não existem empresas pendentes de pesquisa no SABI.</div><div id="copySabiStatus" class="small muted" style="margin-top:8px">Marca como “Não encontrei decisor” as empresas que não conseguiste identificar no LinkedIn; depois copia todos os NIFs daqui.</div></div>
 <div class="panel" id="sabi-import-panel"><b>Importar resultados do SABI</b><p class="muted small">Exporta os resultados do SABI em CSV, com uma pessoa por linha e o NIF da empresa. Os registos entram como pendentes e só passam para Potenciais clientes depois da tua validação.</p><div class="row"><input id="sabiCsvFile" type="file" accept=".csv,text/csv"><button id="importSabiCsv" type="button">Importar CSV</button></div><div id="sabiImportStatus" class="small muted" style="margin-top:8px"></div></div>
 </section>
-<section id="tab-potential" class="tabview hidden"><div class="panel"><div class="row"><div><b>Potenciais clientes</b><div class="muted small">Empresas com pelo menos um decisor validado por ti, através do LinkedIn ou do SABI.</div></div><button id="refreshPotential" class="secondary fit" type="button">Atualizar</button></div><div class="row potential-bulk-toolbar" style="margin-top:16px;justify-content:space-between;align-items:center"><label class="potential-select-all" style="display:flex;align-items:center;gap:9px;flex:0 0 auto"><input id="selectAllPotential" type="checkbox" style="width:17px;height:17px;accent-color:#7195ff"><span class="small">Selecionar todas</span></label><div class="row" style="justify-content:flex-end;align-items:center;gap:12px"><span id="potentialSelectionCount" class="muted small">0 selecionadas</span><button id="deleteSelectedPotential" class="danger fit" type="button" disabled>Eliminar selecionadas</button></div></div><div id="potentialClientsList" style="margin-top:12px">A carregar potenciais clientes…</div></div><div id="potentialCompanyDetail" class="hidden"></div></section>
+<section id="tab-potential" class="tabview hidden"><div class="panel"><div class="row"><div><b>Potenciais clientes</b><div class="muted small">Empresas com pelo menos um decisor validado por ti, através do LinkedIn ou do SABI.</div></div><button id="refreshPotential" class="secondary fit" type="button">Atualizar</button></div><div class="row potential-bulk-toolbar" style="margin-top:16px;justify-content:space-between;align-items:center"><label class="potential-select-all" style="display:flex;align-items:center;gap:9px;flex:0 0 auto"><input id="selectAllPotential" type="checkbox" style="width:17px;height:17px;accent-color:#7195ff"><span class="small">Selecionar todas</span></label><div class="row" style="justify-content:flex-end;align-items:center;gap:12px"><span id="potentialSelectionCount" class="muted small">0 selecionadas</span><button id="exportSelectedPotential" class="secondary fit" type="button" disabled>Exportar contactos (CSV)</button><button id="deleteSelectedPotential" class="danger fit" type="button" disabled>Eliminar selecionadas</button></div></div><div id="potentialClientsList" style="margin-top:12px">A carregar potenciais clientes…</div></div><div id="potentialCompanyDetail" class="hidden"></div></section>
 <section id="tab-rejected" class="tabview hidden"><div class="panel"><div class="row"><div><b>Empresas rejeitadas</b><div class="muted small">Arquivo independente. Podes consultar o motivo e requalificar uma empresa quando fizer sentido.</div></div><button id="refreshRejected" class="secondary fit" type="button">Atualizar</button></div><div id="rejectedCompaniesList" style="margin-top:12px">A carregar empresas rejeitadas…</div></div></section>
 <section id="tab-backoffice" class="tabview hidden"><div class="panel"><b>Gestão de exclusões</b><p class="muted small">Bloqueia NIFs de clientes atuais, processos ativos, duplicados ou empresas que não devem voltar a aparecer na prospeção.</p><div class="fields"><div class="field"><label>NIF</label><input id="excludeNif" maxlength="9" inputmode="numeric" placeholder="9 dígitos"></div><div class="field"><label>Empresa (opcional)</label><input id="excludeName" maxlength="200"></div><div class="field"><label>Motivo</label><select id="excludeReason"><option value="current_customer">Cliente atual</option><option value="active_process">Processo ativo</option><option value="do_not_contact">Não contactar</option><option value="duplicate">Duplicado</option><option value="other">Outro</option></select></div><div class="field"><label>Notas</label><input id="excludeNotes" maxlength="500"></div></div><button id="addExclusion">Adicionar exclusão</button><div id="exclusionStatus" class="small muted"></div></div><div class="panel"><div class="row"><b>Exclusões registadas</b><button class="secondary fit" id="refreshExclusions">Atualizar</button></div><div id="exclusionList" class="muted small">Abre este separador para carregar.</div></div></section>
 </div></main></div>
@@ -356,7 +356,7 @@ function renderRejected(){
 async function renderPotentialClients(){
  const root=$("potentialClientsList");if(!root)return;root.textContent="A carregar…";
  try{
-  const d=await api("/api/potential-clients");const rows=d.records||[];
+  const d=await api("/api/potential-clients");const rows=d.records||[];state.potentialRecords=rows;
   const grouped=new Map();for(const r of rows){if(!grouped.has(r.id))grouped.set(r.id,{company:r,people:[]});grouped.get(r.id).people.push(r)}
   const items=[...grouped.values()];
   const availableIds=new Set(items.map(x=>x.company.id));
@@ -370,8 +370,41 @@ async function renderPotentialClients(){
   root.querySelectorAll("[data-open-potential]").forEach(btn=>btn.onclick=()=>{const id=btn.dataset.openPotential,slot=$("potential-detail-"+id),opening=slot.classList.contains("hidden");root.querySelectorAll(".potential-inline-detail").forEach(x=>{x.classList.add("hidden");x.innerHTML=""});root.querySelectorAll("[data-open-potential]").forEach(x=>{x.textContent="Abrir ficha ＋";x.setAttribute("aria-expanded","false")});if(opening){btn.textContent="Fechar ficha −";btn.setAttribute("aria-expanded","true");openPotentialCompany(id,slot.id)}});
  }catch(e){root.textContent="Não foi possível carregar potenciais clientes: "+e.message}
 }
-function syncPotentialSelectionUI(){const root=$("potentialClientsList"),boxes=[...root.querySelectorAll("[data-select-potential]")],selected=state.potentialSelected;const all=$("selectAllPotential"),count=$("potentialSelectionCount"),del=$("deleteSelectedPotential");if(all){all.checked=boxes.length>0&&boxes.every(b=>selected.includes(b.dataset.selectPotential));all.indeterminate=boxes.some(b=>selected.includes(b.dataset.selectPotential))&&!all.checked;all.disabled=!boxes.length}if(count)count.textContent=selected.length+" selecionada"+(selected.length===1?"":"s");if(del)del.disabled=!selected.length;boxes.forEach(box=>{const checked=selected.includes(box.dataset.selectPotential);box.checked=checked;box.closest("[data-potential-card]")?.classList.toggle("selected",checked)})}
+function syncPotentialSelectionUI(){const root=$("potentialClientsList"),boxes=[...root.querySelectorAll("[data-select-potential]")],selected=state.potentialSelected;const all=$("selectAllPotential"),count=$("potentialSelectionCount"),del=$("deleteSelectedPotential"),exp=$("exportSelectedPotential");if(all){all.checked=boxes.length>0&&boxes.every(b=>selected.includes(b.dataset.selectPotential));all.indeterminate=boxes.some(b=>selected.includes(b.dataset.selectPotential))&&!all.checked;all.disabled=!boxes.length}if(count)count.textContent=selected.length+" selecionada"+(selected.length===1?"":"s");if(del)del.disabled=!selected.length;if(exp)exp.disabled=!selected.length;boxes.forEach(box=>{const checked=selected.includes(box.dataset.selectPotential);box.checked=checked;box.closest("[data-potential-card]")?.classList.toggle("selected",checked)})}
 $("selectAllPotential").onchange=()=>{const boxes=[...$("potentialClientsList").querySelectorAll("[data-select-potential]")];const ids=boxes.map(box=>box.dataset.selectPotential);if($("selectAllPotential").checked){state.potentialSelected=[...new Set([...state.potentialSelected,...ids])]}else{state.potentialSelected=state.potentialSelected.filter(id=>!ids.includes(id))}syncPotentialSelectionUI()};
+function exportSelectedPotentialCsv(){
+ const ids=new Set(state.potentialSelected);
+ if(!ids.size)return;
+ const records=state.potentialRecords.filter(r=>ids.has(r.id));
+ const rows=records.map(r=>{
+  const fullName=String(r.full_name||"").trim(),parts=fullName.split(/\\s+/).filter(Boolean);
+  const firstName=parts.length>1?parts.slice(0,-1).join(" "):(parts[0]||"");
+  const lastName=parts.length>1?parts[parts.length-1]:"";
+  return {
+   "Contact: First Name":firstName,
+   "Contact: Last Name":lastName,
+   "Contact: Full Name":fullName,
+   "Contact: Job Title":r.job_title||"",
+   "Contact: Email":r.email||"",
+   "Contact: Business Phone":r.phone||"",
+   "Contact: LinkedIn URL":r.professional_profile_url||"",
+   "Account: Name":r.name||"",
+   "Account: NIF":String(r.nif||"").replace(/\\D/g,""),
+   "Account lookup key (NIF)":String(r.nif||"").replace(/\\D/g,""),
+   "Company Note":r.commercial_notes||"",
+   "Contact Note":""
+  };
+ });
+ if(!rows.length){showStatus("As empresas selecionadas não têm decisores disponíveis para exportar.","status error");return}
+ const headers=Object.keys(rows[0]),cell=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
+ const csv="\\uFEFF"+[headers.map(cell).join(";"),...rows.map(row=>headers.map(h=>cell(row[h])).join(";"))].join("\\r\\n");
+ const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+ const url=URL.createObjectURL(blob),a=document.createElement("a");
+ a.href=url;a.download="LeadPilot_Contactos_Dynamics_"+new Date().toISOString().slice(0,10)+".csv";
+ document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+ showStatus(rows.length+" decisor(es) exportado(s) para CSV. O ficheiro está preparado para validação e mapeamento no Dynamics; não cria registos no CRM.","status success");
+}
+$("exportSelectedPotential").onclick=exportSelectedPotentialCsv;
 $("deleteSelectedPotential").onclick=async()=>{
  const ids=[...state.potentialSelected];if(!ids.length)return;
  const selected=ids.map(id=>{const c=state.companies.find(x=>x.id===id);return {id,nif:String(c?.nif||"").replace(/\D/g,"")}}); 
