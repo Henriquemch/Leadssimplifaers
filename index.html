@@ -168,7 +168,7 @@ hr{border:0;border-top:1px solid #293952}
 
 /* Fix identification workspace: keep saved-company list full width on desktop */
 @media(min-width:681px){
- #tab-identification{display:block!important;}
+ #tab-identification:not(.hidden){display:block;}
  #tab-identification>#saved-companies-panel{display:block!important;grid-column:auto!important;grid-row:auto!important;position:static!important;width:100%;max-width:none;max-height:none;overflow:visible!important;}
  #savedCompaniesList{width:100%;min-width:0;}
  .ident-company{width:100%;min-width:0;}
