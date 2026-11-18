@@ -280,10 +280,10 @@ async function renderIdentification(){
  if(!c){$("identificationStatus").textContent="Sem empresa selecionada";summary.textContent="Adiciona uma empresa a partir da Pesquisa para abrir a respetiva ficha.";$("peoplePanel").textContent="Seleciona uma empresa.";return}
  $("identificationStatus").textContent=labelStatus(c.commercial_status);
  summary.innerHTML='<div class="row" style="align-items:flex-start"><div style="flex:2"><div class="eyebrow">IDENTIFICAÇÃO</div><div style="font-size:22px;font-weight:800;margin:5px 0">'+companyTitle(c)+'</div><div class="muted small">NIF '+esc(c.nif||"—")+' · '+esc(c.municipality||"Município não identificado")+' · '+esc(c.district||"Distrito não identificado")+'</div><div class="pill">'+esc(c.evidence_type||"Evidência não classificada")+'</div></div><div class="fit"><a href="https://www.google.com/search?q='+encodeURIComponent((c.name||"")+" Portugal site oficial contacto")+'" target="_blank" rel="noopener"><button class="secondary">Site / contacto</button></a><a href="https://registo.justica.gov.pt/Empresas/Publicacoes" target="_blank" rel="noopener"><button class="secondary">Publicações Justiça</button></a><a href="https://rcbe.justica.gov.pt/" target="_blank" rel="noopener"><button class="secondary">RCBE</button></a></div></div><div id="procurementSummary" class="status" style="margin-top:16px">A carregar resumo da contratação pública…</div>';
- const procurementMonths = 12;
+ const procurementMonths = 24;
  let procurementRows = [];
  async function loadProcurementHistory(months, offset=0, append=false){
-  const root=$("procurementSummary");root.className="panel";
+  const root=$("procurementSummary");const wasOpen=append&&$("procurementHistoryContent")&&!$("procurementHistoryContent").classList.contains("hidden");root.className="panel";
   if(!append){procurementRows=[];root.innerHTML='<b>Resumo da contratação pública</b><p class="muted small">A carregar adjudicações…</p>';}
   try{
    const d=await api("/api/companies/"+encodeURIComponent(c.id)+"/procurements?months="+months+"&limit=50&offset="+offset),x=d.summary||{},rows=d.procurements||[],cpvs=d.top_cpv||[],auth=d.top_authorities||[];
@@ -294,6 +294,7 @@ async function renderIdentification(){
    const more=d.has_more?'<button id="loadMoreProcurements" class="secondary" type="button" style="margin-top:10px">Carregar mais 50 adjudicações</button>':'';
    root.innerHTML=header+table+more+"</div>";
    $("toggleProcurementHistory").onclick=()=>{const content=$("procurementHistoryContent"),open=content.classList.toggle("hidden")===false;$("toggleProcurementHistory").textContent=open?"Ocultar contratos −":"Ver contratos ＋";$("toggleProcurementHistory").setAttribute("aria-expanded",String(open));};
+   if(wasOpen){$("procurementHistoryContent").classList.remove("hidden");$("toggleProcurementHistory").textContent="Ocultar contratos −";$("toggleProcurementHistory").setAttribute("aria-expanded","true");}
    if(d.has_more){$("loadMoreProcurements").onclick=async()=>{const btn=$("loadMoreProcurements");btn.disabled=true;await loadProcurementHistory(months,offset+rows.length,true);};}
   }catch(e){root.textContent="Não foi possível carregar o resumo da contratação pública: "+e.message}
  }
