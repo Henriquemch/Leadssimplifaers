@@ -44,10 +44,12 @@ export default async (request) => {
   headers.set("x-forwarded-host", incoming.host);
 
   try {
+    // Buffer incoming writes before forwarding. Node fetch cannot forward a streaming Request body without duplex.
+    const body = ["GET", "HEAD"].includes(request.method) ? undefined : await request.arrayBuffer();
     const upstream = await fetch(target, {
       method: request.method,
       headers,
-      body: ["GET", "HEAD"].includes(request.method) ? undefined : request.body,
+      body,
       redirect: "manual"
     });
     const responseHeaders = new Headers(upstream.headers);
