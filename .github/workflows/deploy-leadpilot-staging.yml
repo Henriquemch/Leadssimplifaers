@@ -76,6 +76,12 @@ jobs:
           wrangler d1 execute leadpilot --remote --config wrangler.toml --command "PRAGMA table_info(company_events)"
           echo "=== validate SABI UPDATE statement (EXPLAIN only) ==="
           wrangler d1 execute leadpilot --remote --config wrangler.toml --command "EXPLAIN UPDATE companies SET linkedin_status='not_found', contact_research_status='sabi_pending', updated_at=CURRENT_TIMESTAMP WHERE id='__diagnostic__'"
+          echo "=== validate lead INSERT statements (EXPLAIN only) ==="
+          wrangler d1 execute leadpilot --remote --config wrangler.toml --command "EXPLAIN INSERT INTO lead_registry (nif,name) VALUES ('000000001','diagnostic')"
+          wrangler d1 execute leadpilot --remote --config wrangler.toml --command "EXPLAIN INSERT INTO companies (id,nif,name,source_url,evidence_type,contract_count,awardee_contract_count,competitor_contract_count,awarded_value_total,latest_contract_date,top_cpv_json,top_authorities_json,recent_contracts_json) VALUES ('__diagnostic__','000000001','diagnostic',NULL,'awardee',0,0,0,0,NULL,'[]','[]','[]')"
+          wrangler d1 execute leadpilot --remote --config wrangler.toml --command "EXPLAIN INSERT INTO company_events (id,company_id,event_type,summary) VALUES ('__diagnostic__','__diagnostic__','qualification_changed','diagnostic')"
+          echo "=== validate decision-maker INSERT (EXPLAIN only) ==="
+          wrangler d1 execute leadpilot --remote --config wrangler.toml --command "EXPLAIN INSERT INTO decision_makers (id,company_id,full_name,job_title,email,phone,contact_type,review_status,notes,professional_profile_url,source_url,provider) VALUES ('__diagnostic__','__diagnostic__','diagnostic',NULL,NULL,NULL,'decision_maker','pending',NULL,NULL,NULL,'manual')"
       - name: Deploy staging Worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
