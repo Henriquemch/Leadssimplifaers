@@ -6,7 +6,7 @@ const env = {
   DB: {
     prepare(sql) {
       return {
-        bind(...values) { return { sql, values, async all() { return { results: [] }; } }; }
+        bind(...values) { return { sql, values, async all() { return { results: sql.includes("PRAGMA table_info(companies)") ? ["linkedin_company_url","linkedin_status","contact_research_status","lead_source","potential_client_at"].map(name => ({ name })) : [] }; } }; }
       };
     },
     async batch(statements) { return statements.map(() => ({ success: true })); }
