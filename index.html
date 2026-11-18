@@ -377,7 +377,7 @@ function exportSelectedPotentialCsv(){
  if(!ids.size)return;
  const records=state.potentialRecords.filter(r=>ids.has(r.id));
  const rows=records.map(r=>{
-  const fullName=String(r.full_name||"").trim(),parts=fullName.split(/\\s+/).filter(Boolean);
+  const fullName=String(r.full_name||"").trim(),parts=fullName.split(/\s+/).filter(Boolean);
   const firstName=parts.length>1?parts.slice(0,-1).join(" "):(parts[0]||"");
   const lastName=parts.length>1?parts[parts.length-1]:"";
   return {
@@ -389,15 +389,15 @@ function exportSelectedPotentialCsv(){
    "Contact: Business Phone":r.phone||"",
    "Contact: LinkedIn URL":r.professional_profile_url||"",
    "Account: Name":r.name||"",
-   "Account: NIF":String(r.nif||"").replace(/\\D/g,""),
-   "Account lookup key (NIF)":String(r.nif||"").replace(/\\D/g,""),
+   "Account: NIF":String(r.nif||"").replace(/\D/g,""),
+   "Account lookup key (NIF)":String(r.nif||"").replace(/\D/g,""),
    "Company Note":r.commercial_notes||"",
    "Contact Note":""
   };
  });
  if(!rows.length){showStatus("As empresas selecionadas não têm decisores disponíveis para exportar.","status error");return}
  const headers=Object.keys(rows[0]),cell=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
- const csv="\\uFEFF"+[headers.map(cell).join(";"),...rows.map(row=>headers.map(h=>cell(row[h])).join(";"))].join("\\r\\n");
+ const csv="\uFEFF"+[headers.map(cell).join(";"),...rows.map(row=>headers.map(h=>cell(row[h])).join(";"))].join("\r\n");
  const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
  const url=URL.createObjectURL(blob),a=document.createElement("a");
  a.href=url;a.download="LeadPilot_Contactos_Dynamics_"+new Date().toISOString().slice(0,10)+".csv";
@@ -474,7 +474,7 @@ async function importSabiCsv(){
   await loadCompanies();status.textContent="Importação concluída: "+imported+" decisores importados; "+skipped+" linhas ignoradas (NIF não encontrado, dados incompletos ou duplicados).";
  }catch(e){status.textContent="Erro na importação: "+e.message}
 }
-$("copySabiNifs").onclick=async()=>{const rows=state.companies.filter(c=>c.contact_research_status==="sabi_pending");const nifs=[...new Set(rows.map(c=>String(c.nif||"").replace(/\\D/g,"")).filter(n=>n.length===9))];const status=$("copySabiStatus");if(!nifs.length){status.textContent="Não existem NIFs pendentes. Nas fichas, seleciona “Não encontrei decisor — enviar NIF para SABI” para colocar empresas nesta lista.";return}try{await navigator.clipboard.writeText(nifs.join("\n"));status.textContent=nifs.length+" NIFs copiados. Cola-os diretamente na pesquisa em massa do SABI."}catch(e){status.textContent="A cópia automática falhou. Seleciona e copia os NIFs: "+nifs.join("\n")}};
+$("copySabiNifs").onclick=async()=>{const rows=state.companies.filter(c=>c.contact_research_status==="sabi_pending");const nifs=[...new Set(rows.map(c=>String(c.nif||"").replace(/\D/g,"")).filter(n=>n.length===9))];const status=$("copySabiStatus");if(!nifs.length){status.textContent="Não existem NIFs pendentes. Nas fichas, seleciona “Não encontrei decisor — enviar NIF para SABI” para colocar empresas nesta lista.";return}try{await navigator.clipboard.writeText(nifs.join("\n"));status.textContent=nifs.length+" NIFs copiados. Cola-os diretamente na pesquisa em massa do SABI."}catch(e){status.textContent="A cópia automática falhou. Seleciona e copia os NIFs: "+nifs.join("\n")}};
 $("importSabiCsv").onclick=importSabiCsv;
 $("refreshPotential").onclick=renderPotentialClients;
 $("refreshRejected").onclick=async()=>{await loadCompanies();renderRejected()};
