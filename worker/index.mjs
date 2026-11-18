@@ -345,11 +345,16 @@ export default {
     const sabiQueueMatch = url.pathname.match(/^\/api\/companies\/([^/]+)\/sabi-queue$/);
     if (request.method === "POST" && sabiQueueMatch) {
       const companyId = decodeURIComponent(sabiQueueMatch[1]);
-      const exists = await env.DB.prepare("SELECT id FROM companies WHERE id = ? LIMIT 1").bind(companyId).all();
-      if (!exists.results?.length) return json({ ok: false, error: "Empresa não encontrada." }, 404);
-      await env.DB.prepare("UPDATE companies SET linkedin_status = CASE WHEN linkedin_status = 'found' THEN linkedin_status ELSE 'not_found' END, contact_research_status = 'sabi_pending', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
-        .bind(companyId).run();
-      return json({ ok: true, company_id: companyId, contact_research_status: "sabi_pending" });
+      try {
+        const exists = await env.DB.prepare("SELECT id FROM companies WHERE id = ? LIMIT 1").bind(companyId).all();
+        if (!exists.results?.length) return json({ ok: false, error: "Empresa não encontrada." }, 404);
+        await env.DB.prepare("UPDATE companies SET linkedin_status = CASE WHEN linkedin_status = 'found' THEN linkedin_status ELSE 'not_found' END, contact_research_status = 'sabi_pending', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+          .bind(companyId).run();
+        return json({ ok: true, company_id: companyId, contact_research_status: "sabi_pending" });
+      } catch (error) {
+        console.error("SABI queue update failed", error);
+        return json({ ok: false, error: "Falha ao atualizar a empresa para SABI.", diagnostic: String(error?.message || error).slice(0, 300) }, 500);
+      }
     }
 
     const commercialMatch = url.pathname.match(/^\/api\/companies\/([^/]+)\/commercial-check$/);
@@ -399,9 +404,6 @@ export default {
       }
       const company = await companyById(env.DB, body.company_id);
       if (!company) return json({ ok: false, error: "Company not found." }, 404);
-      if (company.qualification_status !== "approved") {
-        return json({ ok: false, error: "A empresa tem de estar aprovada na identificação antes de registar decisores." }, 409);
-      }
       const contactType = ["general", "decision_maker"].includes(body.contact_type) ? body.contact_type : "decision_maker";
       const reviewStatus = ["pending", "selected", "rejected"].includes(body.review_status) ? body.review_status : "pending";
       const personId = id();
