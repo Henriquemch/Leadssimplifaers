@@ -399,6 +399,17 @@ export default {
       return json({ ok: true, company_id: companyId, commercial_status: nextCommercialStatus });
     }
 
+    const generalPhoneMatch = url.pathname.match(/^\/api\/companies\/([^/]+)\/general-phone$/);
+    if (request.method === "PATCH" && generalPhoneMatch) {
+      const companyId = decodeURIComponent(generalPhoneMatch[1]);
+      const body = await request.json().catch(() => null);
+      if (!body || typeof body.phone !== "string" || body.phone.length > 60) return json({ ok: false, error: "Indica um telefone válido (máximo 60 caracteres)." }, 400);
+      const exists = await env.DB.prepare("SELECT id FROM companies WHERE id = ? LIMIT 1").bind(companyId).first();
+      if (!exists) return json({ ok: false, error: "Empresa não encontrada." }, 404);
+      await env.DB.prepare("UPDATE companies SET general_phone = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(body.phone.trim() || null, companyId).run();
+      return json({ ok: true, company_id: companyId, general_phone: body.phone.trim() || null });
+    }
+
     const peopleMatch = url.pathname.match(/^\/api\/companies\/([^/]+)\/decision-makers$/);
     if (request.method === "GET" && peopleMatch) {
       const companyId = decodeURIComponent(peopleMatch[1]);
