@@ -232,7 +232,7 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/api/potential-clients") {
       const result = await env.DB.prepare(
-        "SELECT c.id, c.nif, c.name, c.sector, c.linkedin_company_url, c.lead_source, c.potential_client_at, dm.id AS decision_maker_id, dm.full_name, dm.job_title, dm.email, dm.phone, dm.professional_profile_url, dm.provider FROM companies c JOIN decision_makers dm ON dm.company_id = c.id AND dm.review_status = 'selected' WHERE c.potential_client_at IS NOT NULL ORDER BY c.potential_client_at DESC, c.name ASC LIMIT 300"
+        "SELECT c.id, c.nif, c.name, c.sector, c.municipality, c.district, c.commercial_notes, c.linkedin_company_url, c.lead_source, c.potential_client_at, dm.id AS decision_maker_id, dm.full_name, dm.job_title, dm.email, dm.phone, dm.professional_profile_url, dm.provider FROM companies c LEFT JOIN decision_makers dm ON dm.company_id = c.id AND dm.review_status = 'selected' WHERE c.potential_client_at IS NOT NULL ORDER BY c.potential_client_at DESC, c.name ASC LIMIT 300"
       ).all();
       return json({ ok: true, records: result.results || [] });
     }
@@ -302,6 +302,22 @@ export default {
       return json({ ok: true, months, from_date: fromDate, limit, offset, total, has_more: offset + (history.results || []).length < total,
         summary: { total_contracts: total, awardee_contracts: Number(summary?.awardee_contracts || 0), competitor_contracts: Number(summary?.competitor_contracts || 0), total_value: Number(summary?.total_value || 0), latest_date: summary?.latest_date || null },
         procurements: history.results || [], top_cpv: cpvs.results || [], top_authorities: authorities.results || [] });
+    }
+
+    const approveCompanyMatch = url.pathname.match(/^\/api\/companies\/([^/]+)\/approve$/);
+    if (request.method === "POST" && approveCompanyMatch) {
+      const companyId = decodeURIComponent(approveCompanyMatch[1]);
+      const company = await env.DB.prepare("SELECT id, name, qualification_status FROM companies WHERE id = ? LIMIT 1").bind(companyId).first();
+      if (!company) return json({ ok: false, error: "Empresa não encontrada." }, 404);
+      if (company.qualification_status === "rejected") return json({ ok: false, error: "A empresa está rejeitada. Requalifica-a antes de aprovar." }, 409);
+      const people = await env.DB.prepare("SELECT COUNT(*) AS total FROM decision_makers WHERE company_id = ?").bind(companyId).first();
+      const totalContacts = Number(people?.total || 0);
+      await env.DB.batch([
+        env.DB.prepare("UPDATE companies SET qualification_status = 'approved', qualified_at = COALESCE(qualified_at, CURRENT_TIMESTAMP), potential_client_at = COALESCE(potential_client_at, CURRENT_TIMESTAMP), contact_research_status = CASE WHEN ? > 0 THEN 'decision_maker_found' ELSE contact_research_status END, lead_source = COALESCE(lead_source, 'manual'), updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(totalContacts, companyId),
+        env.DB.prepare("UPDATE decision_makers SET review_status = 'selected' WHERE company_id = ?").bind(companyId),
+        env.DB.prepare("INSERT INTO company_events (id, company_id, event_type, summary) VALUES (?, ?, 'qualification_changed', ?)").bind(id(), companyId, "Empresa aprovada manualmente; " + totalContacts + " contacto(s) associado(s) promovido(s) para Potenciais clientes.")
+      ]);
+      return json({ ok: true, company_id: companyId, qualification_status: "approved", promoted: true, contacts_promoted: totalContacts });
     }
 
     const qualificationMatch = url.pathname.match(/^\/api\/companies\/([^/]+)\/qualification$/);
