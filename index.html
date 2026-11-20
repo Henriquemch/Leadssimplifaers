@@ -251,7 +251,7 @@ async function openIdentificationInline(id){
  if(!state.selected)return;
  await renderIdentification();
  const slot=$("inline-"+id);if(!slot)return;
- ["identification-overview-panel","people-panel"].forEach(panelId=>{const node=$(panelId);if(node)slot.appendChild(node)});
+ ["people-panel","identification-overview-panel"].forEach(panelId=>{const node=$(panelId);if(node)slot.appendChild(node)});
  slot.classList.add("open");
  const active=slot.closest(".ident-company");active?.classList.add("is-open");
 }
@@ -266,16 +266,16 @@ async function renderPeople(){
  const peopleSearch="https://www.linkedin.com/search/results/people/?keywords="+encodeURIComponent(c.name);
  let people=[];
  try{const d=await api("/api/companies/"+encodeURIComponent(c.id)+"/decision-makers");people=d.decision_makers||[];$("peopleCount").textContent=people.length}catch(e){root.textContent="Não foi possível carregar os decisores: "+e.message;return}
- root.innerHTML='<div class="row" style="justify-content:space-between"><div><b>'+companyTitle(c)+'</b><div class="muted small">Pesquisa LinkedIn primeiro · depois SABI, se não encontrares decisor</div></div><div class="row"><a class="fit" href="'+companySearch+'" target="_blank" rel="noopener"><button type="button">'+companySearchLabel+'</button></a><a class="fit" href="'+peopleSearch+'" target="_blank" rel="noopener"><button type="button" class="secondary">Pesquisar pessoas</button></a></div></div>'+
+ root.innerHTML='<div class="row" style="justify-content:flex-end"><div class="row"><a class="fit" href="'+companySearch+'" target="_blank" rel="noopener"><button type="button">'+companySearchLabel+'</button></a><a class="fit" href="'+peopleSearch+'" target="_blank" rel="noopener"><button type="button" class="secondary">Pesquisar pessoas</button></a></div></div>'+
  '<div class="row" style="margin-top:12px"><div class="muted small">Estado: '+esc(c.linkedin_status||"Ainda não pesquisado")+'</div><button id="sendSabi" class="secondary fit" type="button">Não encontrei decisor — enviar NIF para SABI</button></div>'+
- '<div class="panel" style="margin:14px 0"><b>Registar decisor encontrado no LinkedIn</b><div class="fields" style="margin-top:12px">'+
+ '<div class="panel" style="margin:14px 0"><b>Contactos da empresa</b><div class="field" style="margin-top:12px"><label>Telefone geral da empresa</label><input id="companyGeneralPhone" type="tel" placeholder="+351 ..." value="'+esc(c.general_phone||"")+'"><button id="saveGeneralPhone" class="secondary" type="button" style="margin-top:8px">Guardar telefone geral</button></div><div style="margin-top:16px"><b>Registar decisor encontrado no LinkedIn</b></div><div class="fields" style="margin-top:12px">'+
  '<div class="field"><label>Nome completo</label><input id="personName" placeholder="Nome do decisor"></div>'+
 
  '<div class="field"><label>Email (opcional)</label><input id="personEmail" type="email" placeholder="nome@empresa.pt"></div>'+
  '<div class="field"><label>Telefone (opcional)</label><input id="personPhone" placeholder="+351 ..."></div>'+
 
  '<div class="field"><label>Notas (opcional)</label><input id="personNotes" placeholder="Área de responsabilidade / contexto"></div></div>'+
- '<button id="savePerson" style="margin-top:12px" type="button">Guardar decisor para validação</button></div>'+
+ '<button id="savePerson" style="margin-top:12px" type="button">Guardar contacto</button></div>'+
  '<b>Contactos associados ('+people.length+')</b>'+
  (people.map(p=>'<div class="company"><div><b>'+esc(p.full_name)+'</b><div class="muted small">'+esc(p.job_title||"Cargo não indicado")+' · Fonte: '+esc(p.provider||"Manual")+'</div><div class="small">'+(p.email?'<a href="mailto:'+esc(p.email)+'">'+esc(p.email)+'</a>':"Email não indicado")+' · '+(p.phone?'<a href="tel:'+esc(p.phone)+'">'+esc(p.phone)+'</a>':"Telefone não indicado")+'</div><span class="pill">Associado à empresa</span></div></div>').join("")||'<p class="muted">Ainda não existem contactos. Podes aprovar a empresa agora ou adicionar contactos mais tarde.</p>')+
  '<div class="panel" style="margin-top:14px;border:1px solid var(--accent);background:rgba(99,140,255,.08)"><div class="row" style="justify-content:space-between;align-items:center"><div><b>Aprovação da empresa</b><div class="muted small">Aprovar envia a empresa e todos os contactos associados para Potenciais clientes. Não é necessária aprovação individual dos contactos.</div></div><span class="pill">'+(c.potential_client_at?"Já aprovada":"Pronta para aprovação")+'</span></div><button id="approveCompany" type="button" style="margin-top:12px" '+(c.potential_client_at?'disabled':'')+'>'+(c.potential_client_at?'Empresa aprovada ✓':'Aprovar empresa → Potenciais clientes')+'</button></div>';
@@ -303,6 +303,7 @@ async function renderPeople(){
    showStatus(message,"status error");
   }
  };
+ $("saveGeneralPhone").onclick=async()=>{const btn=$("saveGeneralPhone");btn.disabled=true;try{const phone=$("companyGeneralPhone").value.trim();await api("/api/companies/"+encodeURIComponent(c.id)+"/general-phone",{method:"PATCH",body:JSON.stringify({phone})});const current=state.companies.find(x=>x.id===c.id);if(current)current.general_phone=phone;showStatus("Telefone geral da empresa guardado.","status success");}catch(e){showStatus(e.message,"status error");}finally{btn.disabled=false;}};
  $("savePerson").onclick=async()=>{const fullName=$("personName").value.trim();if(!fullName){showStatus("Indica o nome do decisor.","status error");return}try{await api("/api/decision-makers",{method:"POST",body:JSON.stringify({company_id:c.id,full_name:fullName,email:$("personEmail").value,phone:$("personPhone").value,contact_type:"decision_maker",source_url:c.linkedin_company_url||null,source:"LinkedIn",notes:$("personNotes").value})});await renderPeople();showStatus("Contacto associado à empresa. Será enviado para Potenciais clientes quando aprovares a empresa.","status success");}catch(e){showStatus(e.message,"status error")}};
  $("approveCompany").onclick=async()=>{const btn=$("approveCompany");if(!btn||btn.disabled)return;if(!confirm("Aprovar "+c.name+" e enviar a empresa com todos os contactos associados para Potenciais clientes?"))return;btn.disabled=true;btn.textContent="A aprovar…";try{await api("/api/companies/"+encodeURIComponent(c.id)+"/approve",{method:"POST",body:JSON.stringify({})});await loadCompanies();showStatus("Empresa aprovada. Todos os contactos associados foram enviados para Potenciais clientes.","status success");}catch(e){btn.disabled=false;btn.textContent="Aprovar empresa → Potenciais clientes";showStatus(e.message,"status error")}};
 }
